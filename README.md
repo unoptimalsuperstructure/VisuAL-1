@@ -1,6 +1,9 @@
 # VisuAL-1
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
+# License
+As all of the libraries that this tool uses are licensed under GPLv3 (or more permissive licenses), this tool is also licensed under GPLv3.
+
 # Python Libraries required
 - Numpy
 - PyOpenGL
