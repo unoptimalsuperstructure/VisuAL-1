@@ -15,7 +15,8 @@ class Viewer(QOpenGLWidget):
 
         self.pressed_keys = set()
 
-        self.objects = [Shapes.Cube(1)]
+        self.objects = [Shapes.UnitCube()]
+        self.last = [[self.objects[0], Shapes.Shape(), Shapes.Shape()]]
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     
@@ -63,8 +64,12 @@ class Viewer(QOpenGLWidget):
         self.y_delta = 0
         self.z_delta = 0
         Shapes.drawAxes()
+        
         for obj in self.objects:
             obj.draw()
+        if self.last:
+            self.last[-1][1].draw()
+            self.last[-1][2].draw()
 
     def mousePressEvent(self, event):
         self.x_delta = 0
@@ -144,76 +149,163 @@ class Viewer(QOpenGLWidget):
         self.update()
 
 class SidePanel(QVBoxLayout):
-    def __init__(self):
+    def __init__(self, viewer):
         super().__init__()
-        self.viewer = None
+        self.viewer = viewer
+        self.transformationPanel = TransformationPanel(self)
+        self.objectPanel = ObjectPanel(self)
+        self.activeObj = None
+        self.lastObj = None
+    
+    def translateWindow(self):
+        self.window = Windows.TranslateWindow(self.activeObj)
+        self.window.show()
+        self.window.nums.connect(self.translate)
+    
+    def translate(self, nums):
+        self.activeObj.translate(*nums)
+        if self.activeObj.lastTransform:
+            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
+            self.lastObj = self.activeObj
+    
+    def reflectLineWindow(self):
+        self.window = Windows.ReflectLineWindow(self.activeObj)
+        self.window.show()
+        self.window.nums.connect(self.reflectLine)
+    
+    def reflectLine(self, nums):
+        self.activeObj.reflectLine(*nums)
+        if self.activeObj.lastTransform:
+            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
+            self.lastObj = self.activeObj
+
+    def reflectPlaneWindow(self):
+        self.window = Windows.ReflectPlaneWindow(self.activeObj)
+        self.window.show()
+        self.window.nums.connect(self.reflectPlane)
+    
+    def reflectPlane(self, nums):
+        self.activeObj.reflectPlane(*nums)
+        if self.activeObj.lastTransform:
+            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
+    
+    def undo(self):
+        if self.viewer.last:
+            lastObj = self.viewer.last.pop()[0]
+            if len(lastObj.matrixStack) == 1:
+                self.viewer.objects.pop()
+                if self.viewer.objects:
+                    self.activeObj = self.viewer.objects[-1]
+                else:
+                    self.activeObj = None
+                self.objectPanel.deleteButton(lastObj)
+            else:
+                lastObj.undo()
+        self.viewer.update()
+    
+    def resetShape(self):
+        if self.activeObj:
+            self.activeObj.resetMatrix()
+            self.viewer.last = []
+        self.viewer.update()
+    
+    def deleteShape(self):
+        if self.activeObj:
+            self.viewer.objects.pop(self.viewer.objects.index(self.activeObj))
+            self.viewer.last = []
+            self.objectPanel.deleteButton(self.activeObj)
+            if self.viewer.objects:
+                self.activeObj = self.viewer.objects[-1]
+            else:
+                self.activeObj = None
+        self.viewer.update()
+    
+    def addShapeWindow(self):
+        self.window = Windows.AddShapeWindow()
+        self.window.show()
+        self.window.params.connect(self.addShape)
+    
+    def addShape(self, params):
+        shape, nums = params[0], params[1:]
+        lookup = {"UnitCube": Shapes.UnitCube}
+        obj = lookup[shape](*nums)
+        self.viewer.objects.append(obj)
+        self.viewer.last.append([obj, Shapes.Shape(), Shapes.Shape()])
+        self.objectPanel.addButton(obj)
+
+class TransformationPanel(QVBoxLayout):
+    def __init__(self, sidePanel):
+        super().__init__()
         self.addWidget(QLabel("Transformations"))
+        self.sidePanel = sidePanel
 
         translateButton = QPushButton("Translate")
-        translateButton.clicked.connect(self.translateWindow)
+        translateButton.clicked.connect(self.sidePanel.translateWindow)
 
         reflectLineButton = QPushButton("Reflect about Line")
-        reflectLineButton.clicked.connect(self.reflectLineWindow)
+        reflectLineButton.clicked.connect(self.sidePanel.reflectLineWindow)
 
         reflectPlaneButton = QPushButton("Reflect about Plane")
-        reflectPlaneButton.clicked.connect(self.reflectPlaneWindow)
+        reflectPlaneButton.clicked.connect(self.sidePanel.reflectPlaneWindow)
 
         undoButton = QPushButton("Undo")
-        undoButton.clicked.connect(self.undo)
+        undoButton.clicked.connect(self.sidePanel.undo)
 
-        resetButton = QPushButton("Reset")
-        resetButton.clicked.connect(self.resetShape)
+        resetButton = QPushButton("Reset current object (irreversible)")
+        resetButton.clicked.connect(self.sidePanel.resetShape)
+
+        deleteButton = QPushButton("Delete current object (irreversible)")
+        deleteButton.clicked.connect(self.sidePanel.deleteShape)
         
         self.addWidget(translateButton)
         self.addWidget(reflectLineButton)
         self.addWidget(reflectPlaneButton)
         self.addWidget(undoButton)
         self.addWidget(resetButton)
+        self.addWidget(deleteButton)
         self.addStretch()
     
-    def translateWindow(self):
-        self.window = Windows.TranslateWindow()
-        self.window.show()
-        self.window.nums.connect(self.translate)
+class ObjectPanel(QVBoxLayout):
+    def __init__(self, sidePanel):
+        super().__init__()
+        self.addWidget(QLabel("Objects"))
+        self.sidePanel = sidePanel
+        self.buttons = []
+        for obj in sidePanel.viewer.objects:
+            button = QRadioButton(obj.type)
+            button.obj = obj
+            button.toggled.connect(self.onToggle)
+            self.buttons.append(button)
+            self.addWidget(button)
+        addButton = QPushButton("Add new Shape...")
+        addButton.clicked.connect(self.sidePanel.addShapeWindow)
+        self.addWidget(addButton)
     
-    def translate(self, nums):
-        for obj in self.viewer.objects:
-            obj.translate(*nums)
+    def addButton(self, obj):
+        button = QRadioButton(obj.type)
+        button.obj = obj
+        button.toggled.connect(self.onToggle)
+        self.buttons.append(button)
+        self.addWidget(button)
     
-    def reflectLineWindow(self):
-        self.window = Windows.ReflectLineWindow()
-        self.window.show()
-        self.window.nums.connect(self.reflectLine)
+    def deleteButton(self, obj):
+        for button in self.buttons:
+            if button.obj == obj:
+                self.buttons.pop(self.buttons.index(button))
+                self.removeWidget(button)
     
-    def reflectLine(self, nums):
-        for obj in self.viewer.objects:
-            obj.reflectLine(*nums)
-
-    def reflectPlaneWindow(self):
-        self.window = Windows.ReflectPlaneWindow()
-        self.window.show()
-        self.window.nums.connect(self.reflectPlane)
+    def onToggle(self):
+        rb = self.sender()
+        if rb.isChecked():
+            self.sidePanel.activeObj = rb.obj
+        else:
+            self.sidePanel.activeObj = None
     
-    def reflectPlane(self, nums):
-        for obj in self.viewer.objects:
-            obj.reflectPlane(*nums)
-    
-    def undo(self):
-        for obj in self.viewer.objects:
-            obj.undo()
-        self.viewer.update()
-    
-    def resetShape(self):
-        for obj in self.viewer.objects:
-            obj.resetMatrix()
-        self.viewer.update()
-        
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visual(LA)-1 - 3D Visualiser v0.0.1")
+        self.setWindowTitle("Visu(AL)-1 - 3D Visualiser v0.0.2")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -225,8 +317,11 @@ class MainWindow(QMainWindow):
         self.viewer = Viewer()
 
         sidePanel = QWidget()
-        sidePanelLayout = SidePanel()
-        sidePanelLayout.viewer = self.viewer
+        sidePanelLayout = SidePanel(self.viewer)
+        transformationPanel = sidePanelLayout.transformationPanel
+        objectPanel = sidePanelLayout.objectPanel
+        sidePanelLayout.addLayout(transformationPanel, stretch = 1)
+        sidePanelLayout.addLayout(objectPanel, stretch = 1)
         sidePanel.setLayout(sidePanelLayout)
         mainLayout.addWidget(self.viewer, stretch = 3)
 
