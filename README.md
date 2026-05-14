@@ -10,9 +10,9 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyQt6
 
 # 3D Visualiser
-Current version: 0.0.2
+Current version: 0.0.2a
 
-Features: Have fun applying translations and reflections to unit cubes. The last position of a cube before a transformation is shown as a translucent cube, and the line of translation, or the line or plane of reflection is shown.
+Features: Have fun applying translations and reflections to unit cubes. The last position of a cube before a transformation is shown as a translucent cube, and the line of translation, or the line or plane of reflection is shown. The matrix stack for the active object can also be displayed.
 
 Controls:
 - WASD to move along the xy-plane.
