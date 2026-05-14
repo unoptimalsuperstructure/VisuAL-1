@@ -13,8 +13,8 @@ class Shape:
         self.surfaces = []
         self.lastTransform = []
         self.lastShape = None
-        self.matrixStack = [np.identity(4)]
-        self.curMatrix = np.identity(4)
+        self.matrixStack = [[np.identity(4), "Identity"]]
+        self.curMatrix = [np.identity(4), "Identity"]
     
     def updateMatrix(self, matrix):
         if not self.isShadow:
@@ -24,18 +24,18 @@ class Shape:
             self.lastShape.alpha = 0.1
             self.lastShape.updateMatrix(self.curMatrix)
             self.matrixStack.append(matrix)
-            self.curMatrix = np.matmul(matrix, self.curMatrix)
+            self.curMatrix = [np.matmul(matrix[0], self.curMatrix[0]), matrix[1]]
         i = 0
         for vertex in self.vertices:
-            vec = np.matmul(matrix, [vertex[0], vertex[1], vertex[2], 1])
+            vec = np.matmul(matrix[0], [vertex[0], vertex[1], vertex[2], 1])
             self.vertices[i] = [vec[0], vec[1], vec[2]]
             i += 1
-        self.centre = np.matmul(matrix, [self.centre[0], self.centre[1], self.centre[2], 1]).tolist()[:-1]
+        self.centre = np.matmul(matrix[0], [self.centre[0], self.centre[1], self.centre[2], 1]).tolist()[:-1]
 
     def undo(self):
         # TODO: Implement a second stack to store projection matrices or other singular transformation matrices
         if len(self.matrixStack) > 1:
-            self.updateMatrix(np.linalg.inv(self.matrixStack[-1]))
+            self.updateMatrix([np.linalg.inv(self.matrixStack[-1][0]), ""])
             self.matrixStack.pop()
             self.matrixStack.pop()
         if self.lastTransform:
@@ -49,7 +49,8 @@ class Shape:
         pass
 
     def translate(self, x, y, z):
-        self.updateMatrix([[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]])
+        newMatrix = np.array([[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]])
+        self.updateMatrix([newMatrix, "Translation"])
         orig = self.centre - np.array([x, y, z])
         self.lastTransform.append(Segment(*self.centre, *orig.tolist()))
         return self
@@ -58,11 +59,12 @@ class Shape:
         if a == 0 and b == 0 and c == 0:
             print("Error: Plane normal is the zero vector")
             return
-        self.updateMatrix(np.array(
+        newMatrix = np.array(
             [[b ** 2 + c ** 2 - a ** 2, -2 * a * b, -2 * a * c, 2 * a * d],
              [-2 * a * b, a ** 2 + c ** 2 - b ** 2, -2 * b * c, 2 * b * d],
              [-2 * a * c, -2 * b * c, a ** 2 + b ** 2 - c ** 2, 2 * c * d],
-             [0, 0, 0, a ** 2 + b ** 2 + c ** 2]]) / (a ** 2 + b ** 2 + c ** 2))
+             [0, 0, 0, a ** 2 + b ** 2 + c ** 2]]) / (a ** 2 + b ** 2 + c ** 2)
+        self.updateMatrix([newMatrix, "Reflection about Plane"])
         self.lastTransform.append(Plane(a, b, c, d))
         return self
 
@@ -73,11 +75,12 @@ class Shape:
         L = math.sqrt(d1 * d1 + d2 * d2 + d3 * d3)
         d1, d2, d3 = d1/L, d2/L, d3/L
         c = p1 * d1 + p2 * d2 + p3 * d3
-        self.updateMatrix(np.array(
+        newMatrix = np.array(
             [[2 * d1 ** 2 - 1, 2 * d1 * d2, 2 * d1 * d3, 2 * (p1 - d1 * c)],
              [2 * d1 * d2, 2 * d2 ** 2 - 1, 2 * d2 * d3, 2 * (p2 - d2 * c)],
              [2 * d1 * d3, 2 * d2 * d3, 2 * d3 ** 2 - 1, 2 * (p3 - d3 * c)],
-             [0, 0, 0, 1]]))
+             [0, 0, 0, 1]])
+        self.updateMatrix([newMatrix, "Reflection about Line"])
         self.lastTransform.append(Line(p1, p2, p3, d1, d2, d3))
         return self
 

@@ -1,5 +1,8 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QFont
+from MatrixPrinter import toString, concat
+import math
 
 class TranslateWindow(QWidget):
     nums = pyqtSignal(list)
@@ -232,3 +235,20 @@ class AddShapeWindow(QWidget):
         if self.item:
             self.params.emit(self.item)
         event.accept()
+
+class ViewStackWindow(QWidget):
+    def __init__(self, obj):
+        super().__init__()
+        self.setWindowTitle("Matrix Stack")
+        self.layout = QVBoxLayout()
+        matrixStack = []
+        tempStack = obj.matrixStack.copy()
+        tempStack.reverse()
+        topString = ""
+        for matrix in tempStack:
+            matrixStack.append(toString(matrix[0]))
+            topString += matrix[1] + " " * (30 + 4 * math.floor(math.log(abs(matrix[0]).max(), 10)) - len(matrix[1]))
+        label = QLabel(topString + "\n" + (concat(matrixStack)))
+        label.setFont(QFont("Courier New"))
+        self.layout.addWidget(label)
+        self.setLayout(self.layout)

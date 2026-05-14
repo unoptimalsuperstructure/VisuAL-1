@@ -214,10 +214,7 @@ class SidePanel(QVBoxLayout):
             self.viewer.objects.pop(self.viewer.objects.index(self.activeObj))
             self.viewer.last = []
             self.objectPanel.deleteButton(self.activeObj)
-            if self.viewer.objects:
-                self.activeObj = self.viewer.objects[-1]
-            else:
-                self.activeObj = None
+            self.activeObj = None
         self.viewer.update()
     
     def addShapeWindow(self):
@@ -232,6 +229,11 @@ class SidePanel(QVBoxLayout):
         self.viewer.objects.append(obj)
         self.viewer.last.append([obj, Shapes.Shape(), Shapes.Shape()])
         self.objectPanel.addButton(obj)
+    
+    def viewStackWindow(self):
+        if self.activeObj:
+            self.window = Windows.ViewStackWindow(self.activeObj)
+            self.window.show()
 
 class TransformationPanel(QVBoxLayout):
     def __init__(self, sidePanel):
@@ -271,15 +273,18 @@ class ObjectPanel(QVBoxLayout):
         self.addWidget(QLabel("Objects"))
         self.sidePanel = sidePanel
         self.buttons = []
+        addButton = QPushButton("Add new Shape...")
+        addButton.clicked.connect(self.sidePanel.addShapeWindow)
+        self.addWidget(addButton)
+        viewStackButton = QPushButton("View Matrix Stack")
+        viewStackButton.clicked.connect(self.sidePanel.viewStackWindow)
+        self.addWidget(viewStackButton)
         for obj in sidePanel.viewer.objects:
             button = QRadioButton(obj.type)
             button.obj = obj
             button.toggled.connect(self.onToggle)
             self.buttons.append(button)
             self.addWidget(button)
-        addButton = QPushButton("Add new Shape...")
-        addButton.clicked.connect(self.sidePanel.addShapeWindow)
-        self.addWidget(addButton)
     
     def addButton(self, obj):
         button = QRadioButton(obj.type)
@@ -305,8 +310,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 - 3D Visualiser v0.0.2")
-        self.resize(1280, 720)
+        self.setWindowTitle("Visu(AL)-1 - 3D Visualiser v0.0.2a")
+        self.resize(960, 540)
 
         central = QWidget()
         self.setCentralWidget(central)
