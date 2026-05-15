@@ -23,6 +23,28 @@ class MatrixOperation(ABC):
     def execute(self):
         pass
 
+class LinearRegressionOperation(MatrixOperation):
+    def __init__(self, request: dict):
+        super().__init__(request)
+        self.y = self.A[:, -1]
+        self.X = self.A[:, :-1]
+    
+    def execute(self):
+        X = np.c_[np.ones(self.X.shape[0]), self.X]
+        weights, _, _, _ = np.linalg.lstsq(X, self.y)
+        
+        predictions = X @ weights
+        residuals = self.y - predictions
+        r2_value = 1 - (np.sum(residuals ** 2) / np.sum((self.y - np.mean(self.y)) ** 2))
+        
+        return {
+            "matrix": self.matrix,
+            "weights": weights.tolist(),
+            "predictions": predictions.tolist(),
+            "residuals": residuals.tolist(),
+            "r2_value": r2_value
+        }
+
 class SVDOperation(MatrixOperation):
     def execute(self):
         U, S, Vt = np.linalg.svd(self.A)
@@ -120,14 +142,6 @@ class MatrixEngine:
         
         operation_instance = operation_class(request)
         return operation_instance.execute()
-
-test = {
-    "operation": "pca",
-    "matrix": [[2.5, 2], [0.5, 0.7], [2.2, 2.9], [1.9, 2.2], [3.1, 3.0], [2.3, 2.7], [2, 1.6], [1, 1.1], [1.5, 1.6], [1.1, 0.9]],
-    "norm": True
-    }
-
-print(MatrixEngine.run(test))
 
 # def run_svd(matrix: list) -> dict:
 #     '''Returns the initial matrix and SVD decomposed matrix'''
