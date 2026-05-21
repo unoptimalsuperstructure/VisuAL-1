@@ -196,6 +196,68 @@ class ReflectPlaneWindow(QWidget):
             self.nums.emit([self.aval, self.bval, self.cval, self.dval])
         event.accept()
 
+class RotateWindow(QWidget):
+    nums = pyqtSignal(list)
+
+    def __init__(self, activeObj):
+        super().__init__()
+        self.setWindowTitle("Rotate about Line")
+        self.activeObj = activeObj
+        self.layout = QVBoxLayout()
+
+        if self.activeObj:
+            self.angle = None
+            self.a1val = None
+            self.a2val = None
+            self.a3val = None
+
+            self.inputAngle = QLineEdit()
+            self.inputA1 = QLineEdit()
+            self.inputA2 = QLineEdit()
+            self.inputA3 = QLineEdit()
+            self.submit = QPushButton("Submit")
+            self.submit.clicked.connect(self.send)
+
+            self.layout.addWidget(QLabel("Enter the numbers for the vector equation of the line and angle in degrees.\n" \
+                                         "The format is r: t(a1, a2, a3) where t is a real parameter."))
+            self.layout.addWidget(QLabel("Angle:"))
+            self.layout.addWidget(self.inputAngle)
+            self.layout.addWidget(QLabel("a1:"))
+            self.layout.addWidget(self.inputA1)
+            self.layout.addWidget(QLabel("a2:"))
+            self.layout.addWidget(self.inputA2)
+            self.layout.addWidget(QLabel("a3:"))
+            self.layout.addWidget(self.inputA3)
+            self.layout.addWidget(self.submit)
+
+        else:
+            self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
+        
+        self.setLayout(self.layout)
+
+    def send(self):
+        angle = self.inputAngle.text()
+        a1 = self.inputA1.text()
+        a2 = self.inputA2.text()
+        a3 = self.inputA3.text()
+        try:
+            self.angle = float(angle)
+            self.a1val = float(a1)
+            self.a2val = float(a2)
+            self.a3val = float(a3)
+            self.close()
+        except:
+            print("Please enter numbers only.")
+    
+    def closeEvent(self, event):
+        if self.activeObj:
+            if self.a1val == None:
+                self.a1val = 0
+                self.a2val = 0
+                self.a3val = 0
+            self.nums.emit([self.angle, self.a1val, self.a2val, self.a3val])
+        event.accept()    
+
 class AddShapeWindow(QWidget):
     params = pyqtSignal(list)
 

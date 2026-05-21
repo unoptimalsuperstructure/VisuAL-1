@@ -189,6 +189,17 @@ class SidePanel(QVBoxLayout):
         if self.activeObj.lastTransform:
             self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
     
+    def rotate(self, nums):
+        self.activeObj.rotate(*nums)
+        if self.activeObj.lastTransform:
+            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
+            self.lastObj = self.activeObj
+    
+    def rotateWindow(self):
+        self.window = Windows.RotateWindow(self.activeObj)
+        self.window.show()
+        self.window.nums.connect(self.rotate)
+
     def undo(self):
         if self.viewer.last:
             lastObj = self.viewer.last.pop()[0]
@@ -250,6 +261,9 @@ class TransformationPanel(QVBoxLayout):
         reflectPlaneButton = QPushButton("Reflect about Plane")
         reflectPlaneButton.clicked.connect(self.sidePanel.reflectPlaneWindow)
 
+        rotateButton = QPushButton("Rotate about Line")
+        rotateButton.clicked.connect(self.sidePanel.rotateWindow)
+
         undoButton = QPushButton("Undo")
         undoButton.clicked.connect(self.sidePanel.undo)
 
@@ -262,6 +276,7 @@ class TransformationPanel(QVBoxLayout):
         self.addWidget(translateButton)
         self.addWidget(reflectLineButton)
         self.addWidget(reflectPlaneButton)
+        self.addWidget(rotateButton)
         self.addWidget(undoButton)
         self.addWidget(resetButton)
         self.addWidget(deleteButton)

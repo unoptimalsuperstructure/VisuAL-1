@@ -1,7 +1,6 @@
 import math, random, numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
-# from pygame.locals import *
 
 class Shape:
     def __init__(self):
@@ -82,6 +81,44 @@ class Shape:
              [0, 0, 0, 1]])
         self.updateMatrix([newMatrix, "Reflection about Line"])
         self.lastTransform.append(Line(p1, p2, p3, d1, d2, d3))
+        return self
+    
+    def rotate(self, angle, x, y, z):
+        if x == 0 and y == 0 and z == 0:
+            print("Error: Rotation axis is the zero vector")
+            return
+        
+        p1, p2, p3 = self.centre
+        angle = math.radians(angle)
+        L = math.sqrt(x * x + y * y + z * z)
+        x, y, z = x/L, y/L, z/L
+
+        cos_t = math.cos(angle)
+        sin_t = math.sin(angle)
+
+        rot_orig = np.array([
+            [x * x * (1 - cos_t) + cos_t, x * y * (1 - cos_t) - z * sin_t, x * z * (1 - cos_t) + y * sin_t, 0],
+            [y * x * (1 - cos_t) + z * sin_t, y * y * (1 - cos_t) + cos_t, y * z * (1 - cos_t) - x * sin_t, 0],
+            [z * x * (1 - cos_t) - y * sin_t, z * y * (1 - cos_t) + x * sin_t, z * z * (1 - cos_t) + cos_t, 0],
+            [0, 0, 0, 1]
+        ])
+        trans_to_orig = np.array([
+            [1, 0, 0, -p1],
+            [0, 1, 0, -p2],
+            [0, 0, 1, -p3],
+            [0, 0, 0, 1]
+        ])
+        trans_back = np.array([
+            [1, 0, 0, p1],
+            [0, 1, 0, p2],
+            [0, 0, 1, p3],
+            [0, 0, 0, 1]
+        ])
+
+        newMatrix = np.matmul(trans_back, np.matmul(rot_orig, trans_to_orig))
+        
+        self.updateMatrix([newMatrix, "Rotation"])
+        self.lastTransform.append(Line(p1, p2, p3, x, y, z))
         return self
 
 class Cube(Shape):
