@@ -1,7 +1,7 @@
 import math, random, numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from pygame.locals import *
+# from pygame.locals import *
 
 class Shape:
     def __init__(self):
