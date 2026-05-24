@@ -16,6 +16,13 @@ Features: Have fun applying transformations to cubes and regular tetrahedra. The
 
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
 
+## Changelog
+v0.0.2b -> v0.0.3a
+- Redid the undo API, because lmao
+- Added rotation about line, projection onto plane and scaling relative to object centre
+- Translation lines are now shown as translucent and vertex-wise
+- Window aspect ratio of 4:3 or wider with a minimum resolution of 720 x 540, allowing full support for screen resolution of 800 x 600 or higher
+
 Controls:
 - WASD to move along the xy-plane.
 - Space to move up the z-axis, Shift to move down.
