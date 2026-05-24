@@ -1,340 +1,167 @@
-import math, Shapes, sys, Windows
+import sys
 from PyQt6.QtWidgets import *
-from PyQt6.QtOpenGLWidgets import QOpenGLWidget
-from PyQt6.QtCore import Qt, QTimer
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QEvent, Qt
+from ThreeDGraphics import ThreeDViewer as Viewer, ThreeDSidePanel as SidePanel
+import Shapes
 
-class Viewer(QOpenGLWidget):
+class HomeBar(QHBoxLayout):
     def __init__(self):
         super().__init__()
-        
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.perform_action)
-        self.timer.setInterval(10)
+        self.addWidget(QLabel("Home Bar"))
 
-        self.pressed_keys = set()
-
-        self.objects = [Shapes.UnitCube()]
-        self.last = [[self.objects[0], Shapes.Shape(), Shapes.Shape()]]
-
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-    
-    def reset(self):
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        
-
-    def initializeGL(self):
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glViewport(0, 0, 960, 720)
-        self.resetFlag = True
-
-    def paintGL(self):
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        if self.resetFlag:
-            glLoadIdentity()
-            gluPerspective(60, 4/3, 0.1, 50.0)
-            glTranslate(0, 0, -4)
-            glRotatef(60, -1, 0, 0)
-            glRotatef(45, 0, 0, 1)
-            self.yaw = 45
-            self.pitch = 30
-            self.roll = 0
-            self.x_off = 0
-            self.y_off = 0
-            self.z_off = 0
-            self.resetFlag = False
-        else:
-            glTranslate(-self.x_off, -self.y_off, -self.z_off)
-            glRotatef(self.yawDelta, 0, 0, 1)
-            glRotatef(self.pitchDelta, math.cos(self.yaw*math.pi/180), -math.sin(self.yaw*math.pi/180), 0)
-            glRotatef(self.rollDelta, math.sin(self.yaw*math.pi/180), math.cos(self.yaw*math.pi/180), 0)
-            self.x_off += self.x_delta
-            self.y_off += self.y_delta
-            self.z_off += self.z_delta
-            self.yaw += self.yawDelta
-            self.pitch += self.pitchDelta
-            self.roll += self.rollDelta
-            glTranslate(self.x_off, self.y_off, self.z_off)
-        self.yawDelta = 0
-        self.pitchDelta = 0
-        self.rollDelta = 0
-        self.x_delta = 0
-        self.y_delta = 0
-        self.z_delta = 0
-        Shapes.drawAxes()
-        
-        for obj in self.objects:
-            obj.draw()
-        if self.last:
-            self.last[-1][1].draw()
-            self.last[-1][2].draw()
-
-    def mousePressEvent(self, event):
-        self.x_delta = 0
-        self.y_delta = 0
-        self.z_delta = 0
-        if event.button() == Qt.MouseButton.LeftButton or event.button() == Qt.MouseButton.RightButton:
-            self.last_mouse_pos = event.position().toPoint()
-        
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self.resetFlag = True
-            self.update()
-    
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            cur_pos = event.position().toPoint()
-            delta = cur_pos - self.last_mouse_pos
-            self.last_mouse_pos = cur_pos
-            self.rollDelta = 0
-
-            self.yawDelta = 0.5 * delta.x()
-
-            if (self.pitch < 90 and delta.y() > 0) or (self.pitch > -90 and delta.y() < 0):
-               self.pitchDelta = 0.5 * delta.y()
-            else:
-                self.pitchDelta = 0
-            self.update()
-        
-        if event.buttons() == Qt.MouseButton.RightButton:
-            cur_pos = event.position().toPoint()
-            delta = cur_pos - self.last_mouse_pos
-            self.last_mouse_pos = cur_pos
-            self.yawDelta = 0
-            self.pitchDelta = 0
-
-            self.rollDelta = 0.5 * delta.x()
-            self.update()
-    
-    def keyPressEvent(self, event):
-        if not event.isAutoRepeat():
-            self.pressed_keys.add(event.key())
-            self.perform_action()
-            if not self.timer.isActive():
-                self.timer.start()
-        
-        glTranslate(self.x_off, self.y_off, -self.z_off)
-        
-    def keyReleaseEvent(self, event):
-        if not event.isAutoRepeat():
-            self.pressed_keys.discard(event.key())
-            if not self.pressed_keys:
-                self.timer.stop()
-
-    def perform_action(self):
-        self.yawDelta = 0
-        self.pitchDelta = 0
-        self.rollDelta = 0
-        self.x_delta = 0
-        self.y_delta = 0
-        self.z_delta = 0
-        if Qt.Key.Key_W in self.pressed_keys:
-            self.x_delta = -0.1 * math.sin(self.yaw*math.pi/180)
-            self.y_delta = -0.1 * math.cos(self.yaw*math.pi/180)
-        if Qt.Key.Key_S in self.pressed_keys:
-            self.x_delta = 0.1 * math.sin(self.yaw*math.pi/180)
-            self.y_delta = 0.1 * math.cos(self.yaw*math.pi/180)
-        if Qt.Key.Key_A in self.pressed_keys:
-            self.x_delta = 0.1 * math.cos(self.yaw*math.pi/180)
-            self.y_delta = -0.1 * math.sin(self.yaw*math.pi/180)
-        if Qt.Key.Key_D in self.pressed_keys:
-            self.x_delta = -0.1 * math.cos(self.yaw*math.pi/180)
-            self.y_delta = 0.1 * math.sin(self.yaw*math.pi/180)
-        if Qt.Key.Key_Space in self.pressed_keys:
-            self.z_delta = -0.1
-        if Qt.Key.Key_Shift in self.pressed_keys:
-            self.z_delta = 0.1
-        
-        self.update()
-
-class SidePanel(QVBoxLayout):
-    def __init__(self, viewer):
+class OptionPanel(QVBoxLayout):
+    def __init__(self, mainWindow):
         super().__init__()
-        self.viewer = viewer
-        self.transformationPanel = TransformationPanel(self)
-        self.objectPanel = ObjectPanel(self)
-        self.activeObj = None
-        self.lastObj = None
-    
-    def translateWindow(self):
-        self.window = Windows.TranslateWindow(self.activeObj)
-        self.window.show()
-        self.window.nums.connect(self.translate)
-    
-    def translate(self, nums):
-        self.activeObj.translate(*nums)
-        if self.activeObj.lastTransform:
-            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
-            self.lastObj = self.activeObj
-    
-    def reflectLineWindow(self):
-        self.window = Windows.ReflectLineWindow(self.activeObj)
-        self.window.show()
-        self.window.nums.connect(self.reflectLine)
-    
-    def reflectLine(self, nums):
-        self.activeObj.reflectLine(*nums)
-        if self.activeObj.lastTransform:
-            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
-            self.lastObj = self.activeObj
-
-    def reflectPlaneWindow(self):
-        self.window = Windows.ReflectPlaneWindow(self.activeObj)
-        self.window.show()
-        self.window.nums.connect(self.reflectPlane)
-    
-    def reflectPlane(self, nums):
-        self.activeObj.reflectPlane(*nums)
-        if self.activeObj.lastTransform:
-            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
-    
-    def rotate(self, nums):
-        self.activeObj.rotate(*nums)
-        if self.activeObj.lastTransform:
-            self.viewer.last.append([self.activeObj, self.activeObj.lastTransform[-1], self.activeObj.lastShape])
-            self.lastObj = self.activeObj
-    
-    def rotateWindow(self):
-        self.window = Windows.RotateWindow(self.activeObj)
-        self.window.show()
-        self.window.nums.connect(self.rotate)
-
-    def undo(self):
-        if self.viewer.last:
-            lastObj = self.viewer.last.pop()[0]
-            if len(lastObj.matrixStack) == 1:
-                self.viewer.objects.pop()
-                if self.viewer.objects:
-                    self.activeObj = self.viewer.objects[-1]
-                else:
-                    self.activeObj = None
-                self.objectPanel.deleteButton(lastObj)
-            else:
-                lastObj.undo()
-        self.viewer.update()
-    
-    def resetShape(self):
-        if self.activeObj:
-            self.activeObj.resetMatrix()
-            self.viewer.last = []
-        self.viewer.update()
-    
-    def deleteShape(self):
-        if self.activeObj:
-            self.viewer.objects.pop(self.viewer.objects.index(self.activeObj))
-            self.viewer.last = []
-            self.objectPanel.deleteButton(self.activeObj)
-            self.activeObj = None
-        self.viewer.update()
-    
-    def addShapeWindow(self):
-        self.window = Windows.AddShapeWindow()
-        self.window.show()
-        self.window.params.connect(self.addShape)
-    
-    def addShape(self, params):
-        shape, nums = params[0], params[1:]
-        lookup = {"UnitCube": Shapes.UnitCube}
-        obj = lookup[shape](*nums)
-        self.viewer.objects.append(obj)
-        self.viewer.last.append([obj, Shapes.Shape(), Shapes.Shape()])
-        self.objectPanel.addButton(obj)
-    
-    def viewStackWindow(self):
-        if self.activeObj:
-            self.window = Windows.ViewStackWindow(self.activeObj)
-            self.window.show()
-
-class TransformationPanel(QVBoxLayout):
-    def __init__(self, sidePanel):
-        super().__init__()
-        self.addWidget(QLabel("Transformations"))
-        self.sidePanel = sidePanel
-
-        translateButton = QPushButton("Translate")
-        translateButton.clicked.connect(self.sidePanel.translateWindow)
-
-        reflectLineButton = QPushButton("Reflect about Line")
-        reflectLineButton.clicked.connect(self.sidePanel.reflectLineWindow)
-
-        reflectPlaneButton = QPushButton("Reflect about Plane")
-        reflectPlaneButton.clicked.connect(self.sidePanel.reflectPlaneWindow)
-
-        rotateButton = QPushButton("Rotate about Line")
-        rotateButton.clicked.connect(self.sidePanel.rotateWindow)
-
-        undoButton = QPushButton("Undo")
-        undoButton.clicked.connect(self.sidePanel.undo)
-
-        resetButton = QPushButton("Reset current object (irreversible)")
-        resetButton.clicked.connect(self.sidePanel.resetShape)
-
-        deleteButton = QPushButton("Delete current object (irreversible)")
-        deleteButton.clicked.connect(self.sidePanel.deleteShape)
+        self.mainWindow = mainWindow
+        self.previewPanelLayout = mainWindow.previewPanelLayout
+        self.Button1 = QPushButton("2D Image Processing")
+        self.Button2 = QPushButton("3D Graphics Sandbox")
+        self.Button3 = QPushButton("PCA Tool")
+        self.Button4 = QPushButton("Markov Chains")
+        self.Button1.setFixedWidth(150)
+        self.Button2.setFixedWidth(150)
+        self.Button3.setFixedWidth(150)
+        self.Button4.setFixedWidth(150)
+        self.Button2.clicked.connect(self.ThreeDee)
+        self.addWidget(self.Button1)
+        self.addWidget(self.Button2)
+        self.addWidget(self.Button3)
+        self.addWidget(self.Button4)
         
-        self.addWidget(translateButton)
-        self.addWidget(reflectLineButton)
-        self.addWidget(reflectPlaneButton)
-        self.addWidget(rotateButton)
-        self.addWidget(undoButton)
-        self.addWidget(resetButton)
-        self.addWidget(deleteButton)
-        self.addStretch()
+        self.addWidget(QLabel("Hello!"))
+
+        self.hover = False
+
+        self.Button1.installEventFilter(self)
+        self.Button2.installEventFilter(self)
+        self.Button3.installEventFilter(self)
+        self.Button4.installEventFilter(self)
     
-class ObjectPanel(QVBoxLayout):
-    def __init__(self, sidePanel):
+    def eventFilter(self, obj, event):
+        if obj in [self.Button1, self.Button3, self.Button4]:
+            width = int(self.mainWindow.previewPanel.width()//1.2)
+            height = int(self.mainWindow.previewPanel.height()//1.2)
+            img = self.previewPanelLayout.previewImage
+            label = self.previewPanelLayout.defaultLabel
+            if not self.hover:
+                img.setPixmap(QPixmap("static/ComingSoon.png").scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
+                if event.type() == QEvent.Type.Enter:
+                    img.show()
+                    label.hide()
+                    self.hover = True
+            if event.type() == QEvent.Type.Leave:
+                img.hide()
+                label.show()
+                self.hover = False
+        
+        if obj in [self.Button2]:
+            width = int(self.mainWindow.previewPanel.width()//1.2)
+            height = int(self.mainWindow.previewPanel.height()//1.2)
+            img = self.previewPanelLayout.previewImage
+            label = self.previewPanelLayout.defaultLabel
+            if not self.hover:
+                img.setPixmap(QPixmap("static/3DGraphics.png").scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
+                if event.type() == QEvent.Type.Enter:
+                    img.show()
+                    label.hide()
+                    self.hover = True
+            if event.type() == QEvent.Type.Leave:
+                img.hide()
+                label.show()
+                self.hover = False
+    
+        return super().eventFilter(obj, event)
+    
+    def ThreeDee(self):
+        self.newWindow = ThreeDMainWindow()
+        self.newWindow.show()
+        self.mainWindow.close()
+
+class PreviewPanel(QVBoxLayout):
+    def __init__(self, home):
         super().__init__()
-        self.addWidget(QLabel("Objects"))
-        self.sidePanel = sidePanel
-        self.buttons = []
-        addButton = QPushButton("Add new Shape...")
-        addButton.clicked.connect(self.sidePanel.addShapeWindow)
-        self.addWidget(addButton)
-        viewStackButton = QPushButton("View Matrix Stack")
-        viewStackButton.clicked.connect(self.sidePanel.viewStackWindow)
-        self.addWidget(viewStackButton)
-        for obj in sidePanel.viewer.objects:
-            button = QRadioButton(obj.type)
-            button.obj = obj
-            button.toggled.connect(self.onToggle)
-            self.buttons.append(button)
-            self.addWidget(button)
-    
-    def addButton(self, obj):
-        button = QRadioButton(obj.type)
-        button.obj = obj
-        button.toggled.connect(self.onToggle)
-        self.buttons.append(button)
-        self.addWidget(button)
-    
-    def deleteButton(self, obj):
-        for button in self.buttons:
-            if button.obj == obj:
-                self.buttons.pop(self.buttons.index(button))
-                self.removeWidget(button)
-    
-    def onToggle(self):
-        rb = self.sender()
-        if rb.isChecked():
-            self.sidePanel.activeObj = rb.obj
-        else:
-            self.sidePanel.activeObj = None
-    
-class MainWindow(QMainWindow):
+        self.home = home
+        self.previewImage = QLabel()
+        self.previewImage.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.previewImage.hide()
+        self.defaultLabel = QLabel("Visu(AL)-1")
+        self.defaultLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.addWidget(self.previewImage)
+        self.addWidget(self.defaultLabel)
+
+class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 - 3D Visualiser v0.0.2a")
-        self.resize(960, 540)
+        self.setWindowTitle("Visu(AL)-1 v0.03a - Home")
+        self.resize(1280, 720)
 
         central = QWidget()
         self.setCentralWidget(central)
 
-        mainLayout = QHBoxLayout()
+        mainLayout = QVBoxLayout()
         central.setLayout(mainLayout)
+
+        homeBar = QWidget()
+        homeBar.setLayout(HomeBar())
+        homeBar.setStyleSheet("""
+            * {
+                background-color: blue;
+                color: white;
+            }
+        """)
+
+        self.previewPanel = QWidget()
+        self.previewPanel.setStyleSheet("""
+            * {
+                font-size: 96px;
+                font-family: Cascadia Mono;
+                text-align: center;
+            }
+        """)
+        self.previewPanelLayout = PreviewPanel(self.previewPanel)
+        self.previewPanel.setLayout(self.previewPanelLayout)
+
+        optionPanel = QWidget()
+        self.optionPanelLayout = OptionPanel(self)
+        optionPanel.setLayout(self.optionPanelLayout)
+
+        homePanel = QWidget()
+        self.homePanelLayout = QHBoxLayout()
+        homePanel.setLayout(self.homePanelLayout)
+
+        self.homePanelLayout.addWidget(optionPanel, stretch = 1)
+        self.homePanelLayout.addWidget(self.previewPanel, stretch = 3)
+        mainLayout.addWidget(homeBar, stretch = 1)
+        mainLayout.addWidget(homePanel, stretch = 16)
+    
+    def resizeEvent(self, event):
+        w = event.size().width()
+        h = event.size().height()
+        if w/h < 4/3:
+            self.resize(max(720, int(h / 3 * 4)), max(540, h))
+        if w < 720:
+            self.resize(720, h)
+        if h < 540:
+            self.resize(w, 540)
+        self.homePanelLayout.setStretch(0, 200)
+        self.homePanelLayout.setStretch(1, w - 200)
+
+class ThreeDMainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Visu(AL)-1 v0.03a - 3D Visualiser")
+        self.resize(1280, 720)
+
+        central = QWidget()
+        self.setCentralWidget(central)
+
+        self.mainLayout = QHBoxLayout()
+        central.setLayout(self.mainLayout)
         
-        self.viewer = Viewer()
+        self.viewer = Viewer([Shapes.UnitCube()])
 
         sidePanel = QWidget()
         sidePanelLayout = SidePanel(self.viewer)
@@ -343,13 +170,22 @@ class MainWindow(QMainWindow):
         sidePanelLayout.addLayout(transformationPanel, stretch = 1)
         sidePanelLayout.addLayout(objectPanel, stretch = 1)
         sidePanel.setLayout(sidePanelLayout)
-        mainLayout.addWidget(self.viewer, stretch = 3)
-
-        mainLayout.addWidget(sidePanel, stretch = 1)
+        self.mainLayout.addWidget(self.viewer, stretch = 3)
+        self.mainLayout.addWidget(sidePanel, stretch = 1)
+    
+    def resizeEvent(self, event):
+        w = event.size().width()
+        h = event.size().height()
+        if w/h < 8/5:
+            self.resize(max(720, int(h / 5 * 8)), max(415, h))
+        if w < 720 or h < 415:
+            self.resize(720, 415)
+        self.mainLayout.setStretch(0, 4 * h)
+        self.mainLayout.setStretch(1, 3 * w - 4 * h)
 
 app = QApplication(sys.argv)
 
-window = MainWindow()
+window = HomeWindow()
 window.show()
 
 sys.exit(app.exec())
