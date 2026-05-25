@@ -42,16 +42,19 @@ class Shape:
             self.matrixStack.append(matrix)
             self.curMatrix = [np.matmul(matrix[0], self.curMatrix[0]), matrix[1], matrix[2]]
 
-    def repeat(self):
+    def repeat(self, n):
         if len(self.matrixStack) > 1:
-            lastOp = self.matrixStack[-1].copy()
-            if lastOp[1] in ["Identity", "Translation", "Scaling"]:
-                lastOp[2] = Shadow()
+            lastOp = self.matrixStack[-n].copy()
+            if lastOp[1] == "Scaling":
+                self.scale(lastOp[0][0][0])
             else:
-                lastOp[2] = lastOp[2].copy()
-                lastOp[2].segments = []
-                lastOp[2].lastShape = Shape()
-            self.updateMatrix(lastOp, True)
+                if lastOp[1] in ["Identity", "Translation"]:
+                    lastOp[2] = Shadow()
+                else:
+                    lastOp[2] = lastOp[2].copy()
+                    lastOp[2].segments = []
+                    lastOp[2].lastShape = Shape()
+                self.updateMatrix(lastOp, True)
     
     def undo(self):
         if len(self.matrixStack) > 1:

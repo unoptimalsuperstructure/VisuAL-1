@@ -399,6 +399,48 @@ class ScaleWindow(QWidget):
     def closeEvent(self, event):
         event.accept()
 
+class RepeatWindow(QWidget):
+    nums = pyqtSignal(list)
+
+    def __init__(self, activeObj):
+        super().__init__()
+        self.setWindowTitle("Repeat last Transformations")
+        self.activeObj = activeObj
+        self.layout = QGridLayout()
+
+        if self.activeObj:
+
+            self.inputN = QLineEdit()
+            self.submit = QPushButton("Submit")
+            self.submit.clicked.connect(self.send)
+
+            self.layout.addWidget(QLabel("""Enter the number of past transformations, n, to repeat.\nIf n > the number of transformations so far, it will automatically\nbe rounded down to the number of transformations so far."""), 0, 0, 1, 2)
+            self.layout.addWidget(QLabel("n:"), 1, 0)
+            self.layout.addWidget(self.inputN, 1, 1)
+            self.layout.addWidget(self.submit, 2, 0)
+        
+        else:
+            self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
+        
+        self.setLayout(self.layout)
+
+    def send(self):
+        try:
+            n = int(self.inputN.text())
+            if n > 0:
+                self.nums.emit([n])
+            else:
+                self.error = ErrorWindow(1, self)
+                self.nums.emit([self.error])
+        except:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        finally:
+            self.close()
+    
+    def closeEvent(self, event):
+        event.accept()
+
 class AddShapeWindow(QWidget):
     params = pyqtSignal(list)
 

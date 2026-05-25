@@ -225,7 +225,7 @@ class ThreeDSidePanel(QVBoxLayout):
             if self.viewer.shadow:
                 self.viewer.lastObjStack.append(self.activeObj)
     
-    def scaleWindow(self, nums):
+    def scaleWindow(self):
         self.window = Windows.ScaleWindow(self.activeObj)
         self.window.show()
         self.window.nums.connect(self.scale)
@@ -238,12 +238,21 @@ class ThreeDSidePanel(QVBoxLayout):
             self.viewer.shadow = self.activeObj.getShadow()
             if self.viewer.shadow:
                 self.viewer.lastObjStack.append(self.activeObj)
+    
+    def repeatWindow(self):
+        self.window = Windows.RepeatWindow(self.activeObj)
+        self.window.show()
+        self.window.nums.connect(self.repeat)
 
-    def repeat(self):
-        if self.activeObj:
-            self.activeObj.repeat()
-            self.viewer.shadow = self.activeObj.getShadow()
-            self.viewer.lastObjStack.append(self.activeObj)
+    def repeat(self, nums):
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            n = min(nums[0], len(self.activeObj.matrixStack) - 1)
+            for i in range(n):
+                self.activeObj.repeat(n)
+                self.viewer.shadow = self.activeObj.getShadow()
+                self.viewer.lastObjStack.append(self.activeObj)
         self.viewer.update()
     
     def undo(self):
@@ -323,7 +332,7 @@ class ThreeDTransformationPanel(QVBoxLayout):
         scaleButton.clicked.connect(self.sidePanel.scaleWindow)
 
         repeatButton = QPushButton("Repeat last Transformation")
-        repeatButton.clicked.connect(self.sidePanel.repeat)
+        repeatButton.clicked.connect(self.sidePanel.repeatWindow)
 
         undoButton = QPushButton("Undo")
         undoButton.clicked.connect(self.sidePanel.undo)
