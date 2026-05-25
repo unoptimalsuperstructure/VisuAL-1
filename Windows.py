@@ -4,6 +4,38 @@ from PyQt6.QtGui import QFont
 from MatrixPrinter import toString, concat
 import math
 
+def num(x):
+    if x == "":
+        return 0
+    else:
+        try:
+            return float(x)
+        except:
+            return None
+        
+class ErrorWindow(QWidget):
+    def __init__(self, type, window):
+        super().__init__()
+        self.setWindowTitle("Error")
+        self.window = window
+        self.layout = QVBoxLayout()
+        if type == 0:
+            self.layout.addWidget(QLabel("Please select an object."))
+        elif type == 1:
+            self.layout.addWidget(QLabel("At least one of your entries is invalid. Please try again."))
+        elif type == 2:
+            self.layout.addWidget(QLabel("Zero direction vector or normal vector is not allowed. Please try again."))
+        else:
+            self.layout.addWidget(QLabel("Unknown error occurred."))
+        self.submit = QPushButton("OK")
+        self.submit.clicked.connect(self.close)
+        self.layout.addWidget(self.submit)
+        self.setLayout(self.layout)
+    
+    def closeEvent(self, event):
+        self.window.show()
+        event.accept()
+
 class TranslateWindow(QWidget):
     nums = pyqtSignal(list)
 
@@ -11,25 +43,23 @@ class TranslateWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Translate")
         self.activeObj = activeObj
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
 
         if self.activeObj:
-            self.xval = None
-            self.yval = None
-            self.zval = None
             self.inputX = QLineEdit()
             self.inputY = QLineEdit()
             self.inputZ = QLineEdit()
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
 
-            self.layout.addWidget(QLabel("x:"))
-            self.layout.addWidget(self.inputX)
-            self.layout.addWidget(QLabel("y:"))
-            self.layout.addWidget(self.inputY)
-            self.layout.addWidget(QLabel("z:"))
-            self.layout.addWidget(self.inputZ)
-            self.layout.addWidget(self.submit)
+            self.layout.addWidget(QLabel("Enter the units to translate along the x, y and z-axes."), 0, 0, 1, 2)
+            self.layout.addWidget(QLabel("x:"), 1, 0)
+            self.layout.addWidget(self.inputX, 1, 1)
+            self.layout.addWidget(QLabel("y:"), 2, 0)
+            self.layout.addWidget(self.inputY, 2, 1)
+            self.layout.addWidget(QLabel("z:"), 3, 0)
+            self.layout.addWidget(self.inputZ, 3, 1)
+            self.layout.addWidget(self.submit, 4, 0, 1, 2)
         
         else:
             self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
@@ -37,24 +67,17 @@ class TranslateWindow(QWidget):
         self.setLayout(self.layout)
 
     def send(self):
-        x = self.inputX.text()
-        y = self.inputY.text()
-        z = self.inputZ.text()
-        try:
-            self.xval = float(x)
-            self.yval = float(y)
-            self.zval = float(z)
-            self.close()
-        except:
-            print("Please enter numbers only.")
+        x = num(self.inputX.text())
+        y = num(self.inputY.text())
+        z = num(self.inputZ.text())
+        if x == None or y == None or z == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([x, y, z])
+        self.close()
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.xval == None:
-                self.xval = 0
-                self.yval = 0
-                self.zval = 0
-            self.nums.emit([self.xval, self.yval, self.zval])
         event.accept()
 
 class ReflectLineWindow(QWidget):
@@ -64,15 +87,15 @@ class ReflectLineWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Reflect about Line")
         self.activeObj = activeObj
+        self.header = QWidget()
+        self.headerLayout = QVBoxLayout()
+        self.input = QWidget()
+        self.inputLayout = QGridLayout()
         self.layout = QVBoxLayout()
 
+        self.input.setStyleSheet("QLabel{font-family: Cascadia Mono}")
+
         if self.activeObj:
-            self.a1val = None
-            self.a2val = None
-            self.a3val = None
-            self.d1val = None
-            self.d2val = None
-            self.d3val = None
 
             self.inputA1 = QLineEdit()
             self.inputA2 = QLineEdit()
@@ -80,58 +103,64 @@ class ReflectLineWindow(QWidget):
             self.inputD1 = QLineEdit()
             self.inputD2 = QLineEdit()
             self.inputD3 = QLineEdit()
+            self.inputA1.setFixedWidth(120)
+            self.inputA2.setFixedWidth(120)
+            self.inputA3.setFixedWidth(120)
+            self.inputD1.setFixedWidth(120)
+            self.inputD2.setFixedWidth(120)
+            self.inputD3.setFixedWidth(120)
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
+            
+            self.headerLayout.addWidget(QLabel("Enter the vector equation of the line.\n" \
+                                               "The format is r: (a1, a2, a3) + t(d1, d2, d3) where t is a real parameter."))
+            self.header.setLayout(self.headerLayout)
+            self.layout.addWidget(self.header)
+            self.inputLayout.addWidget(QLabel("    ["), 1, 0)
+            self.inputLayout.addWidget(self.inputA1, 1, 1)
+            self.inputLayout.addWidget(QLabel("]     ["), 1, 2)
+            self.inputLayout.addWidget(self.inputD1, 1, 3)
+            self.inputLayout.addWidget(QLabel("]"), 1, 4)
+            self.inputLayout.addWidget(QLabel("r = ["), 2, 0)
+            self.inputLayout.addWidget(self.inputA2, 2, 1)
+            self.inputLayout.addWidget(QLabel("] + t ["), 2, 2)
+            self.inputLayout.addWidget(self.inputD2, 2, 3)
+            self.inputLayout.addWidget(QLabel("]"), 2, 4)
+            self.inputLayout.addWidget(QLabel("    ["), 3, 0)
+            self.inputLayout.addWidget(self.inputA3, 3, 1)
+            self.inputLayout.addWidget(QLabel("]     ["), 3, 2)
+            self.inputLayout.addWidget(self.inputD3, 3, 3)
+            self.inputLayout.addWidget(QLabel("]"), 3, 4)
+            self.inputLayout.addWidget(self.submit, 4, 0, 1, 5)
 
-            self.layout.addWidget(QLabel("Enter the numbers for the vector equation of the line.\n" \
-                                         "The format is r: (a1, a2, a3) + t(d1, d2, d3) where t is a real parameter."))
-            self.layout.addWidget(QLabel("a1:"))
-            self.layout.addWidget(self.inputA1)
-            self.layout.addWidget(QLabel("a2:"))
-            self.layout.addWidget(self.inputA2)
-            self.layout.addWidget(QLabel("a3:"))
-            self.layout.addWidget(self.inputA3)
-            self.layout.addWidget(QLabel("d1:"))
-            self.layout.addWidget(self.inputD1)
-            self.layout.addWidget(QLabel("d2:"))
-            self.layout.addWidget(self.inputD2)
-            self.layout.addWidget(QLabel("d3:"))
-            self.layout.addWidget(self.inputD3)
-            self.layout.addWidget(self.submit)
+            self.input.setLayout(self.inputLayout)
+            self.layout.addWidget(self.input)
 
         else:
-            self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
+            self.headerLayout.addWidget(QLabel("Cannot transform when no object is selected"))
+            self.header.setLayout(self.headerLayout)
+            self.layout.addWidget(self.header)
         
         self.setLayout(self.layout)
 
     def send(self):
-        a1 = self.inputA1.text()
-        a2 = self.inputA2.text()
-        a3 = self.inputA3.text()
-        d1 = self.inputD1.text()
-        d2 = self.inputD2.text()
-        d3 = self.inputD3.text()
-        try:
-            self.a1val = float(a1)
-            self.a2val = float(a2)
-            self.a3val = float(a3)
-            self.d1val = float(d1)
-            self.d2val = float(d2)
-            self.d3val = float(d3)
+        a1 = num(self.inputA1.text())
+        a2 = num(self.inputA2.text())
+        a3 = num(self.inputA3.text())
+        d1 = num(self.inputD1.text())
+        d2 = num(self.inputD2.text())
+        d3 = num(self.inputD3.text())
+        if a1 == None or a2 == None or a3 == None or d1 == None or d2 == None or d3 == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        elif d1 == 0 and d2 == 0 and d3 == 0:
+            self.error = ErrorWindow(2, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([a1, a2, a3, d1, d2, d3])
             self.close()
-        except:
-            print("Please enter numbers only.")
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.a1val == None:
-                self.a1val = 0
-                self.a2val = 0
-                self.a3val = 0
-                self.d1val = 0
-                self.d2val = 0
-                self.d3val = 0
-            self.nums.emit([self.a1val, self.a2val, self.a3val, self.d1val, self.d2val, self.d3val])
         event.accept()
 
 class ReflectPlaneWindow(QWidget):
@@ -141,31 +170,30 @@ class ReflectPlaneWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Reflect about Plane")
         self.activeObj = activeObj
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
 
         if self.activeObj:
-            self.aval = None
-            self.bval = None
-            self.cval = None
-            self.dval = None
 
             self.inputA = QLineEdit()
+            self.inputA.setFixedWidth(50)
             self.inputB = QLineEdit()
+            self.inputB.setFixedWidth(50)
             self.inputC = QLineEdit()
+            self.inputC.setFixedWidth(50)
             self.inputD = QLineEdit()
+            self.inputD.setFixedWidth(50)
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
 
-            self.layout.addWidget(QLabel("Enter a, b, c, d for the plane with equation ax + by + cz = d."))
-            self.layout.addWidget(QLabel("a:"))
-            self.layout.addWidget(self.inputA)
-            self.layout.addWidget(QLabel("b:"))
-            self.layout.addWidget(self.inputB)
-            self.layout.addWidget(QLabel("c:"))
-            self.layout.addWidget(self.inputC)
-            self.layout.addWidget(QLabel("d:"))
-            self.layout.addWidget(self.inputD)
-            self.layout.addWidget(self.submit)
+            self.layout.addWidget(QLabel("Enter a, b, c, d for the plane with equation ax + by + cz = d."), 0, 0, 1, 7)
+            self.layout.addWidget(self.inputA, 1, 0)
+            self.layout.addWidget(QLabel("x +"), 1, 1)
+            self.layout.addWidget(self.inputB, 1, 2)
+            self.layout.addWidget(QLabel("y +"), 1, 3)
+            self.layout.addWidget(self.inputC, 1, 4)
+            self.layout.addWidget(QLabel("z ="), 1, 5)
+            self.layout.addWidget(self.inputD, 1, 6)
+            self.layout.addWidget(self.submit, 2, 0, 1, 7)
         
         else:
             self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
@@ -173,27 +201,21 @@ class ReflectPlaneWindow(QWidget):
         self.setLayout(self.layout)
 
     def send(self):
-        a = self.inputA.text()
-        b = self.inputB.text()
-        c = self.inputC.text()
-        d = self.inputD.text()
-        try:
-            self.aval = float(a)
-            self.bval = float(b)
-            self.cval = float(c)
-            self.dval = float(d)
-            self.close()
-        except:
-            print("Please enter numbers only.")
+        a = num(self.inputA.text())
+        b = num(self.inputB.text())
+        c = num(self.inputC.text())
+        d = num(self.inputD.text())
+        if a == None or b == None or c == None or d == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        elif a == 0 and b == 0 and c == 0:
+            self.error = ErrorWindow(2, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([a, b, c, d])
+        self.close()
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.aval == None:
-                self.aval = 0
-                self.bval = 0
-                self.cval = 0
-                self.dval = 0
-            self.nums.emit([self.aval, self.bval, self.cval, self.dval])
         event.accept()
 
 class RotateLineWindow(QWidget):
@@ -203,16 +225,15 @@ class RotateLineWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Rotate about Line")
         self.activeObj = activeObj
+        self.header = QWidget()
+        self.headerLayout = QVBoxLayout()
+        self.input = QWidget()
+        self.inputLayout = QGridLayout()
         self.layout = QVBoxLayout()
 
+        self.input.setStyleSheet("QLabel{font-family: Cascadia Mono}")
+
         if self.activeObj:
-            self.a1val = None
-            self.a2val = None
-            self.a3val = None
-            self.d1val = None
-            self.d2val = None
-            self.d3val = None
-            self.Rval = None
 
             self.inputA1 = QLineEdit()
             self.inputA2 = QLineEdit()
@@ -221,64 +242,69 @@ class RotateLineWindow(QWidget):
             self.inputD2 = QLineEdit()
             self.inputD3 = QLineEdit()
             self.inputR = QLineEdit()
+            self.inputA1.setFixedWidth(120)
+            self.inputA2.setFixedWidth(120)
+            self.inputA3.setFixedWidth(120)
+            self.inputD1.setFixedWidth(120)
+            self.inputD2.setFixedWidth(120)
+            self.inputD3.setFixedWidth(120)
+            self.inputR.setFixedWidth(120)
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
+            
+            self.headerLayout.addWidget(QLabel("Enter the numbers for the vector equation of the line.\n" \
+                                               "The format is r: (a1, a2, a3) + t(d1, d2, d3) where t is a real parameter.\n" \
+                                               "Enter also the angle of rotation in degrees."))
+            self.header.setLayout(self.headerLayout)
+            self.layout.addWidget(self.header)
+            self.inputLayout.addWidget(QLabel("    ["), 1, 0)
+            self.inputLayout.addWidget(self.inputA1, 1, 1)
+            self.inputLayout.addWidget(QLabel("]     ["), 1, 2)
+            self.inputLayout.addWidget(self.inputD1, 1, 3)
+            self.inputLayout.addWidget(QLabel("]"), 1, 4)
+            self.inputLayout.addWidget(QLabel("r = ["), 2, 0)
+            self.inputLayout.addWidget(self.inputA2, 2, 1)
+            self.inputLayout.addWidget(QLabel("] + t ["), 2, 2)
+            self.inputLayout.addWidget(self.inputD2, 2, 3)
+            self.inputLayout.addWidget(QLabel("]"), 2, 4)
+            self.inputLayout.addWidget(QLabel("    ["), 3, 0)
+            self.inputLayout.addWidget(self.inputA3, 3, 1)
+            self.inputLayout.addWidget(QLabel("]     ["), 3, 2)
+            self.inputLayout.addWidget(self.inputD3, 3, 3)
+            self.inputLayout.addWidget(QLabel("]"), 3, 4)
+            self.inputLayout.addWidget(QLabel("Rotation angle (degrees):"), 4, 0, 1, 3)
+            self.inputLayout.addWidget(self.inputR, 4, 3, 1, 1)
+            self.inputLayout.addWidget(self.submit, 5, 0, 1, 5)
 
-            self.layout.addWidget(QLabel("Enter the numbers for the vector equation of the line.\n" \
-                                         "The format is r: (a1, a2, a3) + t(d1, d2, d3) where t is a real parameter.\n" \
-                                         "Enter also the angle of rotation, r, in degrees."))
-            self.layout.addWidget(QLabel("a1:"))
-            self.layout.addWidget(self.inputA1)
-            self.layout.addWidget(QLabel("a2:"))
-            self.layout.addWidget(self.inputA2)
-            self.layout.addWidget(QLabel("a3:"))
-            self.layout.addWidget(self.inputA3)
-            self.layout.addWidget(QLabel("d1:"))
-            self.layout.addWidget(self.inputD1)
-            self.layout.addWidget(QLabel("d2:"))
-            self.layout.addWidget(self.inputD2)
-            self.layout.addWidget(QLabel("d3:"))
-            self.layout.addWidget(self.inputD3)
-            self.layout.addWidget(QLabel("r:"))
-            self.layout.addWidget(self.inputR)
-            self.layout.addWidget(self.submit)
+            self.input.setLayout(self.inputLayout)
+            self.layout.addWidget(self.input)
 
         else:
-            self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
+            self.headerLayout.addWidget(QLabel("Cannot transform when no object is selected"))
+            self.header.setLayout(self.headerLayout)
+            self.layout.addWidget(self.header)
         
         self.setLayout(self.layout)
 
     def send(self):
-        a1 = self.inputA1.text()
-        a2 = self.inputA2.text()
-        a3 = self.inputA3.text()
-        d1 = self.inputD1.text()
-        d2 = self.inputD2.text()
-        d3 = self.inputD3.text()
-        r = self.inputR.text()
-        try:
-            self.a1val = float(a1)
-            self.a2val = float(a2)
-            self.a3val = float(a3)
-            self.d1val = float(d1)
-            self.d2val = float(d2)
-            self.d3val = float(d3)
-            self.rval = float(r)
+        a1 = num(self.inputA1.text())
+        a2 = num(self.inputA2.text())
+        a3 = num(self.inputA3.text())
+        d1 = num(self.inputD1.text())
+        d2 = num(self.inputD2.text())
+        d3 = num(self.inputD3.text())
+        r = num(self.inputR.text())
+        if a1 == None or a2 == None or a3 == None or d1 == None or d2 == None or d3 == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        elif d1 == 0 and d2 == 0 and d3 == 0 or r % 360 == 0:
+            self.error = ErrorWindow(2, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([a1, a2, a3, d1, d2, d3, r])
             self.close()
-        except:
-            print("Please enter numbers only.")
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.a1val == None:
-                self.a1val = 0
-                self.a2val = 0
-                self.a3val = 0
-                self.d1val = 0
-                self.d2val = 0
-                self.d3val = 0
-                self.rval = 0
-            self.nums.emit([self.a1val, self.a2val, self.a3val, self.d1val, self.d2val, self.d3val, self.rval])
         event.accept()
 
 class ProjectPlaneWindow(QWidget):
@@ -286,33 +312,32 @@ class ProjectPlaneWindow(QWidget):
 
     def __init__(self, activeObj):
         super().__init__()
-        self.setWindowTitle("Projection onto Plane")
+        self.setWindowTitle("Project onto Plane")
         self.activeObj = activeObj
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
 
         if self.activeObj:
-            self.aval = None
-            self.bval = None
-            self.cval = None
-            self.dval = None
 
             self.inputA = QLineEdit()
+            self.inputA.setFixedWidth(50)
             self.inputB = QLineEdit()
+            self.inputB.setFixedWidth(50)
             self.inputC = QLineEdit()
+            self.inputC.setFixedWidth(50)
             self.inputD = QLineEdit()
+            self.inputD.setFixedWidth(50)
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
 
-            self.layout.addWidget(QLabel("Enter a, b, c, d for the plane with equation ax + by + cz = d."))
-            self.layout.addWidget(QLabel("a:"))
-            self.layout.addWidget(self.inputA)
-            self.layout.addWidget(QLabel("b:"))
-            self.layout.addWidget(self.inputB)
-            self.layout.addWidget(QLabel("c:"))
-            self.layout.addWidget(self.inputC)
-            self.layout.addWidget(QLabel("d:"))
-            self.layout.addWidget(self.inputD)
-            self.layout.addWidget(self.submit)
+            self.layout.addWidget(QLabel("Enter a, b, c, d for the plane with equation ax + by + cz = d."), 0, 0, 1, 7)
+            self.layout.addWidget(self.inputA, 1, 0)
+            self.layout.addWidget(QLabel("x +"), 1, 1)
+            self.layout.addWidget(self.inputB, 1, 2)
+            self.layout.addWidget(QLabel("y +"), 1, 3)
+            self.layout.addWidget(self.inputC, 1, 4)
+            self.layout.addWidget(QLabel("z ="), 1, 5)
+            self.layout.addWidget(self.inputD, 1, 6)
+            self.layout.addWidget(self.submit, 2, 0, 1, 7)
         
         else:
             self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
@@ -320,27 +345,21 @@ class ProjectPlaneWindow(QWidget):
         self.setLayout(self.layout)
 
     def send(self):
-        a = self.inputA.text()
-        b = self.inputB.text()
-        c = self.inputC.text()
-        d = self.inputD.text()
-        try:
-            self.aval = float(a)
-            self.bval = float(b)
-            self.cval = float(c)
-            self.dval = float(d)
-            self.close()
-        except:
-            print("Please enter numbers only.")
+        a = num(self.inputA.text())
+        b = num(self.inputB.text())
+        c = num(self.inputC.text())
+        d = num(self.inputD.text())
+        if a == None or b == None or c == None or d == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        elif a == 0 and b == 0 and c == 0:
+            self.error = ErrorWindow(2, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([a, b, c, d])
+        self.close()
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.aval == None:
-                self.aval = 0
-                self.bval = 0
-                self.cval = 0
-                self.dval = 0
-            self.nums.emit([self.aval, self.bval, self.cval, self.dval])
         event.accept()
 
 class ScaleWindow(QWidget):
@@ -350,19 +369,18 @@ class ScaleWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Scale")
         self.activeObj = activeObj
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
 
         if self.activeObj:
-            self.cval = None
 
             self.inputC = QLineEdit()
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
 
-            self.layout.addWidget(QLabel("Enter scaling value c. Note that c > 0."))
-            self.layout.addWidget(QLabel("c:"))
-            self.layout.addWidget(self.inputC)
-            self.layout.addWidget(self.submit)
+            self.layout.addWidget(QLabel("Enter scaling value c. Note that c > 0.\nValues of c <= 0 will have no effect."), 0, 0, 1, 2)
+            self.layout.addWidget(QLabel("c:"), 1, 0)
+            self.layout.addWidget(self.inputC, 1, 1)
+            self.layout.addWidget(self.submit, 2, 0)
         
         else:
             self.layout.addWidget(QLabel("Cannot transform when no object is selected"))
@@ -370,21 +388,15 @@ class ScaleWindow(QWidget):
         self.setLayout(self.layout)
 
     def send(self):
-        c = self.inputC.text()
-        try:
-            self.cval = float(c)
-            if self.cval > 0:
-                self.close()
-            else:
-                print("Please enter c > 0 only.")
-        except:
-            print("Please enter c > 0 only.")
+        c = num(self.inputC.text())
+        if c == None:
+            self.error = ErrorWindow(1, self)
+            self.nums.emit([self.error])
+        else:
+            self.nums.emit([c])
+        self.close()
     
     def closeEvent(self, event):
-        if self.activeObj:
-            if self.cval == None:
-                self.cval = 0
-            self.nums.emit([self.cval])
         event.accept()
 
 class AddShapeWindow(QWidget):
@@ -407,6 +419,7 @@ class AddShapeWindow(QWidget):
         addUnitTetrahedronButton.toggled.connect(self.onToggle)
         submit = QPushButton("Submit")
         submit.clicked.connect(self.send)
+        self.layout.addWidget(QLabel("Select a shape to add. The shape will be added at the origin with unit dimensions."))
         self.layout.addWidget(addUnitCubeButton)
         self.layout.addWidget(addUnitTetrahedronButton)
         self.layout.addWidget(submit)
@@ -421,10 +434,10 @@ class AddShapeWindow(QWidget):
             self.item = None
 
     def send(self):
-        if self.item:
-            self.close()
-        else:
-            print("Please select an object.")
+        if not self.item:
+            self.error = ErrorWindow(0, self)
+            self.error.show()
+        self.close()
     
     def closeEvent(self, event):
         if self.item:

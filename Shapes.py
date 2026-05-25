@@ -156,7 +156,7 @@ class Shape:
         return shadow
     
     def scale(self, c):
-        if c == 0 or c == 1:
+        if c <= 0 or c == 1:
             return
         centre = self.vertices[-1]
         newMatrix = np.array([[c, 0, 0, (1 - c)*centre[0]], [0, c, 0, (1 - c)*centre[1]], [0, 0, c, (1 - c)*centre[2]], [0, 0, 0, 1]])

@@ -94,7 +94,7 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.03a - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.0.3b - Home")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -152,7 +152,7 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.03a - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.0.3b - 3D Visualiser")
         self.resize(1280, 720)
 
         central = QWidget()

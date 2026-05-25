@@ -161,10 +161,13 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.nums.connect(self.translate)
     
     def translate(self, nums):
-        self.activeObj.translate(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.translate(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
     
     def reflectLineWindow(self):
         self.window = Windows.ReflectLineWindow(self.activeObj)
@@ -172,10 +175,13 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.nums.connect(self.reflectLine)
     
     def reflectLine(self, nums):
-        self.activeObj.reflectLine(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.reflectLine(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
 
     def reflectPlaneWindow(self):
         self.window = Windows.ReflectPlaneWindow(self.activeObj)
@@ -183,10 +189,13 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.nums.connect(self.reflectPlane)
     
     def reflectPlane(self, nums):
-        self.activeObj.reflectPlane(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.reflectPlane(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
     
     def rotateLineWindow(self):
         self.window = Windows.RotateLineWindow(self.activeObj)
@@ -194,10 +203,13 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.nums.connect(self.rotateLine)
     
     def rotateLine(self, nums):
-        self.activeObj.rotateLine(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.rotateLine(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
     
     def projectPlaneWindow(self):
         self.window = Windows.ProjectPlaneWindow(self.activeObj)
@@ -205,21 +217,27 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.nums.connect(self.projectPlane)
     
     def projectPlane(self, nums):
-        self.activeObj.projectPlane(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.projectPlane(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
     
-    def scaleWindow(self):
+    def scaleWindow(self, nums):
         self.window = Windows.ScaleWindow(self.activeObj)
         self.window.show()
         self.window.nums.connect(self.scale)
     
     def scale(self, nums):
-        self.activeObj.scale(*nums)
-        self.viewer.shadow = self.activeObj.getShadow()
-        if self.viewer.shadow:
-            self.viewer.lastObjStack.append(self.activeObj)
+        if isinstance(nums[0], Windows.ErrorWindow):
+            nums[0].show()
+        else:
+            self.activeObj.scale(*nums)
+            self.viewer.shadow = self.activeObj.getShadow()
+            if self.viewer.shadow:
+                self.viewer.lastObjStack.append(self.activeObj)
 
     def repeat(self):
         if self.activeObj:
