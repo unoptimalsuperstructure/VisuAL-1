@@ -10,9 +10,9 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyQt6
 
 # 3D Visualiser
-**Current version: 0.0.3b**
+**Current version: 0.0.3c**
 
-Features: Have fun applying transformations to cubes and regular tetrahedra. The last position of an object before a transformation is shown as a translucent object, and the lines of vertex-wise translation and the line or plane of reflection (where applicable) is shown. The matrix stack for the active object can also be displayed.
+Features: Have fun applying transformations to cubes and regular tetrahedra. The last position of an object before a transformation is shown as a translucent object, and the lines of vertex-wise translation and the line or plane of reflection (where applicable) is shown. The matrix stack for the active object can also be displayed. Any number of previous operations can also be repeated.
 
 - WASD to move along the xy-plane.
 - Space to move up the z-axis, Shift to move down.
@@ -23,6 +23,9 @@ Features: Have fun applying transformations to cubes and regular tetrahedra. The
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
 
 # Changelog
+v0.0.3b -> v0.0.3c
+- Repeat feature now allows you to repeat the n most recent transformations. If n > number of transformations so far, it will automatically be rounded down to the number of transformations so far.
+
 v0.0.3a -> v0.0.3b
 - Input windows are now more user-friendly in that the interface more closely resembles what would be written on paper (particularly for vector equations of lines).
 - Zero direction vector for lines or normal vector for planes is now detected and throws a native error window, and prompts the user to try again.
