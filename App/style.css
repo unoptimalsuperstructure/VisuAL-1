@@ -242,6 +242,16 @@ pre.matrix {
 
 .error-msg { font-size: 11px; color: var(--warning); margin-top: 6px; min-height: 14px; }
 
+/* ── 3js viewport ── */
+#viewport {
+  position: relative;
+}
+
+#viewport canvas {
+  width: 100%;
+  height: 100%;
+}
+
 /* ── Misc ── */
 .tag {
   font-size: 10px;
@@ -252,15 +262,5 @@ pre.matrix {
   color: var(--text);
   letter-spacing: 0.03em;
 }
-
-#placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 13px;
-}
-#placeholder .big { font-size: 32px; opacity: 0.2; }
 
 #no-obj { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }

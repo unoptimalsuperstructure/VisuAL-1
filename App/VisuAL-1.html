@@ -49,6 +49,9 @@
         <button class="btn" onclick="openModal('reflectPlane')">
           Reflect about Plane
         </button>
+        <button class="btn" onclick="openModal('rotate')">
+          Rotate
+        </button>
         <button class="btn" onclick="undoLast()">
           Undo
         </button>
@@ -79,8 +82,8 @@
 
   </div>
 
-  <div id="placeholder">
-    <span>3D display</span>
+  <div id="viewport">
+    <canvas id="gl"></canvas>
   </div>
 </div>
 
@@ -97,6 +100,8 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="functions.js"></script>
+<script src="3drender.js"></script>
 </body>
 </html>

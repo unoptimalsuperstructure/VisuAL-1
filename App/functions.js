@@ -48,6 +48,20 @@ function reflectLineMatrix(p1, p2, p3, d1, d2, d3) {
   ];
 }
 
+function rotateLineMatrix(d1, d2, d3, angle) {
+  const L = Math.sqrt(d1*d1 + d2*d2 + d3*d3);
+  d1/=L; d2/=L; d3/=L;
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const t = 1 - c;
+  return [
+    t*d1*d1+c,   t*d1*d2-s*d3, t*d1*d3+s*d2, 0,
+    t*d1*d2+s*d3, t*d2*d2+c,   t*d2*d3-s*d1, 0,
+    t*d1*d3-s*d2, t*d2*d3+s*d1, t*d3*d3+c,   0,
+    0,           0,           0,           1,
+  ];
+}
+
 function invertMatrix4(m) {
   const [m00,m01,m02,m03,m10,m11,m12,m13,m20,m21,m22,m23,m30,m31,m32,m33] = m;
   const b00=m00*m11-m01*m10, b01=m00*m12-m02*m10, b02=m00*m13-m03*m10;
@@ -80,24 +94,31 @@ const SHAPE_GEOMETRY = {
       const h = 0.5;
       return [[-h,-h,-h],[h,-h,-h],[-h,h,-h],[h,h,-h],[-h,-h,h],[h,-h,h],[-h,h,h],[h,h,h]];
     }
+  },
+  Point: {
+    vertices: (args) => {
+      const [x,y,z] = args || [0,0,0];
+      return [[x,y,z]];
+    }
   }
 };
 
 let idCounter = 0;
 
 class SceneObj {
-  constructor(type = 'UnitCube') {
+  constructor(type = 'UnitCube', initArgs = null) {
     this.id = ++idCounter;
     this.type = type;
-    this.vertices = this.getBaseVertices(type);
-    this.centre = [0, 0, 0];
+    this.initArgs = initArgs;
+    this.vertices = this.getBaseVertices(type, initArgs);
+    this.centre = type === 'Point' ? [...this.vertices[0]] : [0, 0, 0];
     this.matrixStack = [[identity4(), 'Identity']];
     this.curMatrix = [identity4(), 'Identity'];
   }
 
-  getBaseVertices(type) {
+  getBaseVertices(type, args) {
     const shape = SHAPE_GEOMETRY[type] || SHAPE_GEOMETRY['UnitCube'];
-    return shape.vertices();
+    return shape.vertices(args);
   }
 
   applyTransform(mat, name) {
@@ -119,8 +140,8 @@ class SceneObj {
   }
 
   reset() {
-    this.vertices = this.getBaseVertices(this.type);
-    this.centre = [0, 0, 0];
+    this.vertices = this.getBaseVertices(this.type, this.initArgs);
+    this.centre = this.type === 'Point' ? [...this.vertices[0]] : [0, 0, 0];
     this.matrixStack = [[identity4(), 'Identity']];
     this.curMatrix = [identity4(), 'Identity'];
   }
@@ -222,6 +243,14 @@ function renderStack() {
 let currentModal = null;
 
 const MODAL_CONFIGS = {
+  addPoint: {
+    title: 'Add Point',
+    desc: 'Add a point at specified coordinates (x, y, z).',
+    fields: [{id:'x',label:'x'},{id:'y',label:'y'},{id:'z',label:'z'}],
+    apply(vals) {
+      addObject('Point', [vals.x, vals.y, vals.z]);
+    }
+  },
   translate: {
     title: 'Translate',
     desc: 'Move the object by a vector (x, y, z).',
@@ -249,12 +278,23 @@ const MODAL_CONFIGS = {
       if (d1===0 && d2===0 && d3===0) throw new Error('Direction vector cannot be zero');
       obj.applyTransform(reflectLineMatrix(a1,a2,a3,d1,d2,d3), 'Reflection ∥ Line');
     }
+  },
+  rotate: {
+    title: 'Rotate about Direction',
+    desc: 'Rotate about the direction vector (d1,d2,d3) by angle θ (in degrees).',
+    fields: [{id:'d1',label:'d1'},{id:'d2',label:'d2'},{id:'d3',label:'d3'},{id:'angle',label:'Angle (°)'}],
+    apply(vals, obj) {
+      const {d1,d2,d3,angle} = vals;
+      if (d1===0 && d2===0 && d3===0) throw new Error('Direction vector cannot be zero');
+      const rad = angle * Math.PI / 180;
+      obj.applyTransform(rotateLineMatrix(d1,d2,d3,rad), 'Rotation ∥ Direction');
+    }
   }
 };
 
 function openModal(type) {
   const obj = getActive();
-  if (!obj) { alert('Please select an object first.'); return; }
+  if (type !== 'addPoint' && !obj) { alert('Please select an object first.'); return; }
   const cfg = MODAL_CONFIGS[type];
   currentModal = type;
   document.getElementById('modal-title').textContent = cfg.title;
@@ -284,8 +324,8 @@ function closeModalBg(e) {
 
 function submitModal() {
   if (!currentModal) return;
-  const obj = getActive();
-  if (!obj) { closeModal(); return; }
+  if (currentModal !== 'addPoint' && !getActive()) { closeModal(); return; }
+  
   const cfg = MODAL_CONFIGS[currentModal];
   const vals = {};
   let err = false;
@@ -295,9 +335,14 @@ function submitModal() {
     if (isNaN(v)) { inp.classList.add('err'); err = true; }
     else { inp.classList.remove('err'); vals[f.id] = v; }
   });
+  
   if (err) { document.getElementById('modal-err').textContent = 'Please enter valid numbers.'; return; }
   try {
-    cfg.apply(vals, obj);
+    if (currentModal === 'addPoint') {
+      cfg.apply(vals);
+    } else {
+      cfg.apply(vals, getActive());
+    }
     closeModal();
     renderStack();
   } catch (e) {
@@ -312,6 +357,7 @@ document.addEventListener('keydown', e => {
 
 const SHAPE_REGISTRY = [
   { type: 'UnitCube', desc: 'Unit cube centred at origin' },
+  { type: 'Point', desc: 'A point at specified coordinates' }
 ];
 
 function buildShapeOptions() {
@@ -323,7 +369,14 @@ function buildShapeOptions() {
     row.innerHTML =
       `<div class="shape-name">${s.type}</div>` +
       `<div class="shape-desc">${s.desc}</div>`;
-    row.onclick = () => { addObject(s.type); toggleAddMenu(false); };
+    row.onclick = () => { 
+      if (s.type === 'Point') {
+        openModal('addPoint');
+      } else {
+        addObject(s.type); 
+      }
+      toggleAddMenu(false);
+    };
     container.appendChild(row);
   });
 }
@@ -335,8 +388,8 @@ function toggleAddMenu(force) {
   else { menu.style.display = 'none'; }
 }
 
-function addObject(type) {
-  const obj = new SceneObj(type);
+function addObject(type, args) {
+  const obj = new SceneObj(type, args);
   objects.push(obj);
   activeId = obj.id;
   renderObjList();
