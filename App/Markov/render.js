@@ -33,10 +33,6 @@ function setMode(m) {
   render();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  COLOUR UTILITY
-// ═══════════════════════════════════════════════════════════════════
-
 function hexAlpha(hex, alpha) {
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);
@@ -93,7 +89,7 @@ function render() {
     else                 drawArrow(from, to, w, e.weight, offset, showWeights);
   }
 
-  // live edge being drawn
+  // live edge drawing
   if (mode === 'edge' && edgeSrcNode) {
     ctx.beginPath();
     ctx.moveTo(edgeSrcNode.x, edgeSrcNode.y);
@@ -105,7 +101,7 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // stationary rings
+  // stationary 
   if (stat) {
     state.nodes.forEach((nd, i) => {
       ctx.beginPath();
@@ -154,9 +150,7 @@ function render() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  DRAW HELPERS
-// ═══════════════════════════════════════════════════════════════════
+// Draw-er functions
 
 function drawArrow(from, to, normW, rawW, offset, showWeights) {
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -235,9 +229,7 @@ function drawSelfLoop(nd, normW, rawW, showWeights) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  CANVAS EVENTS
-// ═══════════════════════════════════════════════════════════════════
+// Canvas
 
 function canvasXY(e) {
   const rect = canvas.getBoundingClientRect();
@@ -291,7 +283,7 @@ canvas.addEventListener('dblclick', e => {
   }
 
   if (mode === 'node') {
-    // Double-click an edge in node mode also edits weight — convenient shortcut
+    // 2x click an edge to edit weight 
     const hitEdge = edgeAt(x, y);
     if (hitEdge) {
       openEdgeModal(hitEdge.from, hitEdge.to);
@@ -308,7 +300,9 @@ canvas.addEventListener('mousemove', e => {
     render(); return;
   }
   if (mode === 'edge' && edgeSrcNode) render();
+  
   // Cursor feedback
+
   const overNode = nodeAt(x, y);
   const overEdge = !overNode && edgeAt(x, y);
   canvas.style.cursor = overNode ? 'grab' : overEdge ? 'pointer' : 'crosshair';
@@ -317,7 +311,7 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup',    () => { dragging = null; });
 canvas.addEventListener('mouseleave', () => { dragging = null; });
 
-// Load setup
+// Load Canvas 
 
 resizeCanvas();
 setMode('node');
