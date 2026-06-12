@@ -266,14 +266,14 @@ canvas.addEventListener('dblclick', e => {
   const { x, y } = canvasXY(e);
 
   if (mode === 'edge') {
-    // Double-click a node → self-loop shortcut
+    // Double click a node to create self-loop 
     const hitNode = nodeAt(x, y);
     if (hitNode) {
       edgeSrcNode = null;
       openEdgeModal(hitNode.id, hitNode.id);
       return;
     }
-    // Double-click an edge → edit its weight
+    // Double click an edge to open edge modal 
     const hitEdge = edgeAt(x, y);
     if (hitEdge) {
       edgeSrcNode = null;
@@ -282,8 +282,7 @@ canvas.addEventListener('dblclick', e => {
     }
   }
 
-  if (mode === 'node') {
-    // 2x click an edge to edit weight 
+  if (mode === 'node') { 
     const hitEdge = edgeAt(x, y);
     if (hitEdge) {
       openEdgeModal(hitEdge.from, hitEdge.to);
@@ -310,6 +309,8 @@ canvas.addEventListener('mousemove', e => {
 
 canvas.addEventListener('mouseup',    () => { dragging = null; });
 canvas.addEventListener('mouseleave', () => { dragging = null; });
+
+// To implement "arrange edges" for tidiness (ref to chem draw for auto arrangement of molecule drawing) 
 
 // Load Canvas 
 
