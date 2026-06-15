@@ -46,14 +46,9 @@
 
 #stack-panel {
   flex: 1;
-  overflow-y: auto;
   background: var(--panel);
   padding: 10px 14px;
 }
-
-#stack-panel::-webkit-scrollbar { width: 4px; }
-#stack-panel::-webkit-scrollbar-track { background: transparent; }
-#stack-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 /* ── Matrix cards ── */
 

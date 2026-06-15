@@ -113,10 +113,7 @@ function renderMatrixPanel() {
   panel.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  EDGE WEIGHT MODAL
-//  Depends on: markov.js (state), scene.js (edgeBetween)
-// ═══════════════════════════════════════════════════════════════════
+// Edge modal
 
 let pendingEdge = null;
 

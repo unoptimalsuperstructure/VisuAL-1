@@ -33,10 +33,6 @@ function setMode(m) {
   render();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  COLOUR UTILITY
-// ═══════════════════════════════════════════════════════════════════
-
 function hexAlpha(hex, alpha) {
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);
@@ -154,9 +150,7 @@ function render() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  DRAW HELPERS
-// ═══════════════════════════════════════════════════════════════════
+// Draw-ers
 
 function drawArrow(from, to, normW, rawW, offset, showWeights) {
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -235,9 +229,7 @@ function drawSelfLoop(nd, normW, rawW, showWeights) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  CANVAS EVENTS
-// ═══════════════════════════════════════════════════════════════════
+// Canvas events
 
 function canvasXY(e) {
   const rect = canvas.getBoundingClientRect();
@@ -271,30 +263,23 @@ canvas.addEventListener('mousedown', e => {
 });
 
 canvas.addEventListener('dblclick', e => {
+  // dbl click shortcuts
   const { x, y } = canvasXY(e);
 
   if (mode === 'edge') {
-    // Double-click a node → self-loop shortcut
+    // self loop
     const hitNode = nodeAt(x, y);
     if (hitNode) {
       edgeSrcNode = null;
       openEdgeModal(hitNode.id, hitNode.id);
       return;
     }
-    // Double-click an edge → edit its weight
+    // edit weight
     const hitEdge = edgeAt(x, y);
     if (hitEdge) {
       edgeSrcNode = null;
       openEdgeModal(hitEdge.from, hitEdge.to);
       return;
-    }
-  }
-
-  if (mode === 'node') {
-    // Double-click an edge in node mode also edits weight — convenient shortcut
-    const hitEdge = edgeAt(x, y);
-    if (hitEdge) {
-      openEdgeModal(hitEdge.from, hitEdge.to);
     }
   }
 });
@@ -308,7 +293,6 @@ canvas.addEventListener('mousemove', e => {
     render(); return;
   }
   if (mode === 'edge' && edgeSrcNode) render();
-  // Cursor feedback
   const overNode = nodeAt(x, y);
   const overEdge = !overNode && edgeAt(x, y);
   canvas.style.cursor = overNode ? 'grab' : overEdge ? 'pointer' : 'crosshair';

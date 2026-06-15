@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <title>VisuAL-1</title>
 <link rel="stylesheet" href="BaseStyle.css" />
-<link rel="stylesheet" href="Home.html"/>
+<link rel="stylesheet" href="Home.css"/>
 </head>
 <body>
 
@@ -21,20 +21,19 @@
   <div id="home-nav">
     <div class="nav-section-label">Tools</div>
 
-    <div class="tool-card" id="card-sandbox"
-         onmouseenter="previewTool('sandbox')"
-         onmouseleave="clearPreview()"
-         onclick="openTool('./3d/3d.html')">
+    <div class="tool-card" id="card-sandbox" onclick="openTool('sandbox')">
       <div class="tool-card-name">3D Sandbox</div>
       <div class="tool-card-sub">Linear transformations</div>
     </div>
 
-    <div class="tool-card" id="card-markov"
-         onmouseenter="previewTool('markov')"
-         onmouseleave="clearPreview()"
-         onclick="openTool('./markov/markov.html')">
+    <div class="tool-card" id="card-markov" onclick="openTool('markov')">
       <div class="tool-card-name">Markov Chains</div>
       <div class="tool-card-sub">Graph editor &amp; simulation</div>
+    </div>
+
+    <div class="tool-card" id="card-image" onclick="openTool('image')">
+      <div class="tool-card-name">Image processing</div>
+      <div class="tool-card-sub">Application of filters on images</div>
     </div>
 
   </div>
@@ -42,11 +41,14 @@
   <!-- ── Preview pane ── -->
   <div id="home-preview">
     <div id="home-preview-default">VisuAL-1</div>
-    <div id="home-preview-title"  style="display:none"></div>
-    <div id="home-preview-desc"   style="display:none"></div>
-    <!-- <a   id="home-open-btn"       href="#">Open →</a> -->
-    <!-- Will redesign web on another day -->
+
+    <div id="home-left-info" style="display:none">
+      <div id="info-name"></div>
+      <div id="info-desc"></div>
+      <a id="info-proceed-btn" href="#">Open →</a>
+    </div>
   </div>
+  
  
 </div>
 
@@ -63,35 +65,33 @@ const TOOLS = {
   markov: {
     name: 'Markov Chains',
     desc: 'Build a Markov chain by placing nodes and drawing edges with weights. ' +
-          'Step through the simulation and watch probability mass flow between states ' +
+          'Watch the probability mass flow between states ' +
           'until the distribution converges.',
     href: './markov/markov.html',
   },
+  image: {
+    name: 'Image Processing',
+    desc: 'Apply filters to any images and observe the changes. ' +
+          'Supports multiple layers and undo functionality.',
+    href: './ImageProcess/image.html',
+  },
 };
 
-function previewTool(id) {
+let activeTool = null;
+
+function openTool(id) {
+  activeTool = id;
   const t = TOOLS[id];
-  document.getElementById('home-preview-default').style.display = 'none';
-  document.getElementById('home-preview-title').style.display  = 'block';
-  document.getElementById('home-preview-desc').style.display   = 'block';
-  document.getElementById('home-preview-title').textContent    = t.name;
-  document.getElementById('home-preview-desc').textContent     = t.desc;
-  document.getElementById('home-open-btn').style.display       = 'inline-block';
-  document.getElementById('home-open-btn').href                = t.href;
+ 
   document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
   document.getElementById('card-' + id).classList.add('active');
-}
-
-function clearPreview() {
-  document.getElementById('home-preview-default').style.display = 'block';
-  document.getElementById('home-preview-title').style.display   = 'none';
-  document.getElementById('home-preview-desc').style.display    = 'none';
-  document.getElementById('home-open-btn').style.display        = 'none';
-  document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
-}
-
-function openTool(href) {
-  window.location.href = href;
+ 
+  document.getElementById('home-preview-default').style.display = 'none';
+  document.getElementById('home-left-info').style.display    = 'flex';
+ 
+  document.getElementById('info-name').textContent = t.name;
+  document.getElementById('info-desc').textContent = t.desc;
+  document.getElementById('info-proceed-btn').href = t.href;
 }
 
 </script>

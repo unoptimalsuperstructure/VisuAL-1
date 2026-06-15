@@ -67,7 +67,7 @@ function edgeAt(x, y) {
     const to   = state.nodes.find(n => n.id === e.to);
     if (!from || !to) continue;
 
-    let lx, ly;   // label / midpoint position
+    let lx, ly;
 
     if (e.from === e.to) {
       const angle = -Math.PI / 2;

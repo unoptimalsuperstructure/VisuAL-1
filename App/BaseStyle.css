@@ -71,13 +71,17 @@ body {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   flex-shrink: 0;
 }
 
+#sidebar::-webkit-scrollbar       { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
 /* ── Sections ── */
 
-.section { border-bottom: 1px solid var(--border); }
+.section { border-bottom: 1px solid var(--border); flex-shrink: 0; }
 
 .section-head {
   padding: 10px 14px;

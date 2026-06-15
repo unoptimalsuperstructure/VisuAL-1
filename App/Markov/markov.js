@@ -53,12 +53,15 @@ function simStep() {
     return;
   }
   if (state.nodes.length === 0) return;
+
   const { P } = buildMatrix();
   const n     = state.nodes.length;
+
   const next  = new Float64Array(n);
   for (let i = 0; i < n; i++)
     for (let j = 0; j < n; j++)
       next[i] += P[i][j] * state.prob[j];
+
   let s = 0;
   for (let i = 0; i < n; i++) { next[i] = Math.max(0, next[i]); s += next[i]; }
   if (s > 1e-12) for (let i = 0; i < n; i++) next[i] /= s;
@@ -66,6 +69,7 @@ function simStep() {
   state.history.push(next.slice());
   if (state.history.length > TRAIL_N) state.history.shift();
   state.step++;
+
   updateStepBadge();
   renderDistPanel();
   render();
@@ -103,9 +107,11 @@ function updateStepBadge() {
 
 function stationary() {
   if (!state.nodes.length) return null;
+
   const { P } = buildMatrix();
   const n = P.length;
   let v = new Float64Array(n).fill(1 / n);
+  
   for (let iter = 0; iter < 500; iter++) {
     const next = new Float64Array(n);
     for (let i = 0; i < n; i++)
