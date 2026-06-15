@@ -89,7 +89,7 @@ function render() {
     else                 drawArrow(from, to, w, e.weight, offset, showWeights);
   }
 
-  // live edge being drawn
+  // live edge drawing
   if (mode === 'edge' && edgeSrcNode) {
     ctx.beginPath();
     ctx.moveTo(edgeSrcNode.x, edgeSrcNode.y);
@@ -101,7 +101,7 @@ function render() {
     ctx.setLineDash([]);
   }
 
-  // stationary rings
+  // stationary 
   if (stat) {
     state.nodes.forEach((nd, i) => {
       ctx.beginPath();
@@ -150,7 +150,7 @@ function render() {
   });
 }
 
-// Draw-ers
+// Draw-er functions
 
 function drawArrow(from, to, normW, rawW, offset, showWeights) {
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -301,7 +301,9 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup',    () => { dragging = null; });
 canvas.addEventListener('mouseleave', () => { dragging = null; });
 
-// Load setup
+// To implement "arrange edges" for tidiness (ref to chem draw for auto arrangement of molecule drawing) 
+
+// Load Canvas 
 
 resizeCanvas();
 setMode('node');
