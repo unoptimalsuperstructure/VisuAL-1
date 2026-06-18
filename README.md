@@ -14,7 +14,7 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyQt6
 
 ## What to expect for the next update
-Next version: v0.1.3a - Loading and saving JSON files via the localhost MongoDB database + TLS for creating a polygon and using it to form pyramids and prisms.
+Next version: v0.1.3a - Loading and saving JSON files via a localhost MongoDB database + TLS for creating a polygon and using it to form pyramids and prisms.
 
 # 2D Image Processing
 
@@ -57,6 +57,7 @@ Web App Controls (Spherical Coordinates):
 # Changelog
 v0.1.2a -> v0.1.2b
 - Finally added shearing and custom matrices.
+- Permanent lines or planes drawn by the user can now be deleted.
 - Switched from a class file holding all shapes to a single abstract class file, with geometric objects being represented as JSON files instead.
 - Shapes can also have their size and centre specified before adding.
 - Added interface size configuration file for 3D Visualiser.
