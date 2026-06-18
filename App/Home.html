@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>VisuAL-1</title>
+<link rel="stylesheet" href="BaseStyle.css" />
+<link rel="stylesheet" href="Home.css"/>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">Milestone 1</div>
+  <div class="spacer"></div>
+  <!-- Maybe log in button? -->
+</div>
+
+<div id="main">
+
+  <!-- ── Left nav ── -->
+  <div id="home-nav">
+    <div class="nav-section-label">Tools</div>
+
+    <div class="tool-card" id="card-sandbox" onclick="openTool('sandbox')">
+      <div class="tool-card-name">3D Sandbox</div>
+      <div class="tool-card-sub">Linear transformations</div>
+    </div>
+
+    <div class="tool-card" id="card-markov" onclick="openTool('markov')">
+      <div class="tool-card-name">Markov Chains</div>
+      <div class="tool-card-sub">Graph editor &amp; simulation</div>
+    </div>
+
+    <div class="tool-card" id="card-image" onclick="openTool('image')">
+      <div class="tool-card-name">Image processing</div>
+      <div class="tool-card-sub">Application of filters on images</div>
+    </div>
+
+  </div>
+
+  <!-- ── Preview pane ── -->
+  <div id="home-preview">
+    <div id="home-preview-default">VisuAL-1</div>
+
+    <div id="home-left-info" style="display:none">
+      <div id="info-name"></div>
+      <div id="info-desc"></div>
+      <a id="info-proceed-btn" href="#">Open →</a>
+    </div>
+  </div>
+  
+ 
+</div>
+
+<script>
+
+const TOOLS = {
+  sandbox: {
+    name: '3D Sandbox',
+    desc: 'Visualise linear algebra transformations in three dimensions. ' +
+          'Add shapes, apply translations, reflections, rotations, projections, ' +
+          'and scaling, then watch the transformation matrix stack build up.',
+    href: './3d/3d.html',
+  },
+  markov: {
+    name: 'Markov Chains',
+    desc: 'Build a Markov chain by placing nodes and drawing edges with weights. ' +
+          'Watch the probability mass flow between states ' +
+          'until the distribution converges.',
+    href: './markov/markov.html',
+  },
+  image: {
+    name: 'Image Processing',
+    desc: 'Apply filters to any images and observe the changes. ' +
+          'Supports multiple layers and undo functionality.',
+    href: './ImageProcess/image.html',
+  },
+};
+
+let activeTool = null;
+
+function openTool(id) {
+  activeTool = id;
+  const t = TOOLS[id];
+ 
+  document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('card-' + id).classList.add('active');
+ 
+  document.getElementById('home-preview-default').style.display = 'none';
+  document.getElementById('home-left-info').style.display    = 'flex';
+ 
+  document.getElementById('info-name').textContent = t.name;
+  document.getElementById('info-desc').textContent = t.desc;
+  document.getElementById('info-proceed-btn').href = t.href;
+}
+
+</script>
+</body>
+</html>

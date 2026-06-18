@@ -1,26 +1,61 @@
-import math, random, numpy as np
+import math, numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from copy import deepcopy
 
-class Shape:
-    def __init__(self):
-        global shapes
-        shapes = {"UnitCube": UnitCube, "UnitTetrahedron": UnitTetrahedron}
-        self.type = "Shape"
+class Polygon:
+    def __init__(self, vertices, edges):
+        self.vertices = vertices
+        self.edges = edges
+
+class Solid:
+    def __init__(self, name, vertices, edges, surfaces, params):
+        self.name = name
+        self.show = True
+        self.isActive = False
         self.isShadow = False
-        self.initVertices = []
-        self.vertices = []
-        self.edges = []
-        self.surfaces = []
+        self.params = params
+        for i in range(len(vertices)):
+            for j in range(3):
+                vertices[i][j] *= params[0]
+                vertices[i][j] += params[j + 1]
+        self.default = [vertices.copy(), edges.copy(), surfaces.copy()]
+        self.vertices = vertices
+        self.initVertices = vertices.copy()
+        self.edges = edges
+        self.surfaces = surfaces
+        
         self.singularMatrixStack = []
         self.matrixStack = [[np.identity(4), "Identity", Shadow()]]
         self.curMatrix = [np.identity(4), "Identity", Shadow()]
     
+    def showhide(self):
+        self.show = not self.show
+
     def getShadow(self):
         if self.matrixStack:
             return self.matrixStack[-1][2]
         else:
-            return None
+            return Shadow()
+    
+    def draw(self):
+        if self.show:
+            glBegin(GL_QUADS)
+            i = 0
+            a = 1 if self.isActive else 0.8
+            for surface in self.surfaces:
+                glColor4fv((a * (1 - i * 1/(len(self.surfaces) - 1)),  a * (i * 1/(len(self.surfaces) - 1)), a * 0.5, 0.1 if self.isShadow else 0.7))
+                for vertex in surface:
+                    glVertex3fv(self.vertices[vertex])
+                i += 1
+            glEnd()
+        if self.isActive:
+            glBegin(GL_LINES)
+            glColor3fv((1, 1, 1))
+            for edge in self.edges:
+                for vertex in edge:
+                    glVertex3fv(self.vertices[vertex])
+            glEnd()
     
     def updateMatrix(self, matrix, redrawEdges):
         i = 0
@@ -29,8 +64,7 @@ class Shape:
             self.vertices[i] = [vec[0], vec[1], vec[2]]
             i += 1
         if not self.isShadow:
-            lastShape = shapes.get(self.type)()
-            lastShape.alpha = 0.1
+            lastShape = Solid(self.name, *deepcopy(self.default), [1, 0, 0, 0])
             lastShape.isShadow = True
             lastShape.updateMatrix(self.curMatrix, False)
             if float(abs(np.linalg.det(matrix[0]))) < 0.00001:
@@ -53,7 +87,7 @@ class Shape:
                 else:
                     lastOp[2] = lastOp[2].copy()
                     lastOp[2].segments = []
-                    lastOp[2].lastShape = Shape()
+                    lastOp[2].lastShape = Solid(self.name, *deepcopy(self.default), [1, 0, 0, 0])
                 self.updateMatrix(lastOp, True)
     
     def undo(self):
@@ -75,9 +109,6 @@ class Shape:
         while len(self.matrixStack) > 1:
             self.undo()
 
-    def draw(self):
-        pass
-
     def translate(self, x, y, z):
         if not (x == 0 and y == 0 and z == 0):
             newMatrix = np.array([[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0, 0, 0, 1]])
@@ -95,7 +126,9 @@ class Shape:
              [-2 * a * c, -2 * b * c, a ** 2 + b ** 2 - c ** 2, 2 * c * d],
              [0, 0, 0, a ** 2 + b ** 2 + c ** 2]]) / (a ** 2 + b ** 2 + c ** 2)
         shadow = Shadow()
-        shadow.addPlane(Plane(a, b, c, d))
+        plane = Plane(a, b, c, d)
+        plane.isActive = True
+        shadow.addPlane(plane)
         self.updateMatrix([newMatrix, "Reflection about Plane", shadow], True)
         return shadow
 
@@ -112,7 +145,9 @@ class Shape:
              [2 * d1 * d3, 2 * d2 * d3, 2 * d3 ** 2 - 1, 2 * (p3 - d3 * c)],
              [0, 0, 0, 1]])
         shadow = Shadow()
-        shadow.addLine(Line(p1, p2, p3, d1, d2, d3))
+        line = Line(p1, p2, p3, d1, d2, d3)
+        line.isActive = True
+        shadow.addLine(line)
         self.updateMatrix([newMatrix, "Reflection about Line", shadow], True)
         return shadow
     
@@ -138,7 +173,9 @@ class Shape:
              [R7, R8, R9, p3 - (R7 * p1 + R8 * p2 + R9 * p3)],
              [0, 0, 0, 1]])
         shadow = Shadow()
-        shadow.addLine(Line(p1, p2, p3, d1, d2, d3))
+        line = Line(p1, p2, p3, d1, d2, d3)
+        line.isActive = True
+        shadow.addLine(line)
         self.updateMatrix([newMatrix, "Rotation about Line", shadow], True)
         return shadow
     
@@ -154,7 +191,9 @@ class Shape:
              [-a * c, -b * c, 1 - c ** 2, c * d],
              [0, 0, 0, 1]])
         shadow = Shadow()
-        shadow.addPlane(Plane(a, b, c, d))
+        plane = Plane(a, b, c, d)
+        plane.isActive = True
+        shadow.addPlane(plane)
         self.updateMatrix([newMatrix, "Projection onto Plane", shadow], True)
         return shadow
     
@@ -165,102 +204,28 @@ class Shape:
         newMatrix = np.array([[c, 0, 0, (1 - c)*centre[0]], [0, c, 0, (1 - c)*centre[1]], [0, 0, c, (1 - c)*centre[2]], [0, 0, 0, 1]])
         self.updateMatrix([newMatrix, "Scaling", Shadow()], True)
         return Shadow()
-
-class Cube(Shape):
-    def __init__(self, r, x, y, z):
-        super().__init__()
-        self.type = "Cube"
-        self.r = r
-        self.alpha = 0.7
-        self.initVertices = [[-0.5 * r, -0.5 * r, -0.5 * r],
-                         [0.5 * r, -0.5 * r, -0.5 * r],
-                         [-0.5 * r, 0.5 * r, -0.5 * r],
-                         [0.5 * r, 0.5 * r, -0.5 * r],
-                         [-0.5 * r, -0.5 * r, 0.5 * r],
-                         [0.5 * r, -0.5 * r, 0.5 * r],
-                         [-0.5 * r, 0.5 * r, 0.5 * r],
-                         [0.5 * r, 0.5 * r, 0.5 * r],
-                         [0, 0, 0]]
-        for vertex in self.initVertices:
-            vertex[0] += x
-            vertex[1] += y
-            vertex[2] += z
-        self.vertices = self.initVertices.copy()
-        self.edges = [[0, 1],
-                      [0, 2],
-                      [0, 4],
-                      [3, 1],
-                      [3, 2],
-                      [3, 7],
-                      [5, 1],
-                      [5, 4],
-                      [5, 7],
-                      [6, 2],
-                      [6, 4],
-                      [6, 7]]
-        self.surfaces = [(0, 1, 3, 2),
-                         (4, 5, 7, 6),
-                         (0, 1, 5, 4),
-                         (2, 3, 7, 6),
-                         (0, 2, 6, 4),
-                         (1, 3, 7, 5)]
     
-    def draw(self):
-        glBegin(GL_QUADS)
-        i = 0
-        for surface in self.surfaces:
-            glColor4fv((1 - i * 0.2, i * 0.2, 0.5, self.alpha))
-            for vertex in surface:
-                glVertex3fv(self.vertices[vertex])
-            i += 1
-        glEnd()
-
-class UnitCube(Cube):
-    def __init__(self):
-        super().__init__(1, 0, 0, 0)
-        self.type = "UnitCube"
-
-class Tetrahedron(Shape):
-    def __init__(self, r, x, y, z):
-        super().__init__()
-        self.type = "Tetrahedron"
-        self.r = r
-        self.alpha = 0.7
-        self.initVertices = [[-0.5 * r, -math.sqrt(3)/6 * r, -math.sqrt(6)/9 * r],
-                         [0.5 * r, -math.sqrt(3)/6 * r, -math.sqrt(6)/9 * r],
-                         [0, math.sqrt(3)/3 * r, -math.sqrt(6)/9 * r],
-                         [0, 0, 2 * math.sqrt(6)/9 * r],
-                         [0, 0, 0]]
-        for vertex in self.initVertices:
-            vertex[0] += x
-            vertex[1] += y
-            vertex[2] += z
-        self.vertices = self.initVertices.copy()
-        self.edges = [[0, 1],
-                      [0, 2],
-                      [0, 3],
-                      [1, 2],
-                      [1, 3],
-                      [2, 3]]
-        self.surfaces = [(0, 1, 2),
-                         (0, 1, 3),
-                         (0, 2, 3),
-                         (1, 2, 3)]
+    def shear(self, a1, a2, a3, d1, d2, d3, c1, c2, c3, k):
+        if (d1 == 0 and d2 == 0 and d3 == 0) or (c1 == 0 and c2 == 0 and c3 == 0):
+            print("Error: Axis or direction is the zero vector")
+            return
+        elif abs(float(np.linalg.norm(np.cross([d1, d2, d3]/np.linalg.norm([d1, d2, d3]), [c1, c2, c3]/np.linalg.norm([c1, c2, c3]))))) < 0.001:
+            print("Error: Axis and direction are parallel or almost parallel")
+            return
+        else:
+            n = np.cross([d1, d2, d3], [c1, c2, c3])
+            M = np.identity(3) + k/(np.linalg.norm(n) ** 2) * np.transpose(np.matrix([c1, c2, c3])) * n
+            t = -k/(np.linalg.norm(n) ** 2) * np.dot(n, [a1, a2, a3]) * np.transpose(np.matrix([c1, c2, c3]))
+            newMatrix = np.block([[M, t], [0, 0, 0, 1]]).A
+            self.updateMatrix([newMatrix, "Shearing", Shadow()], True)
+            return Shadow()
     
-    def draw(self):
-        glBegin(GL_QUADS)
-        i = 0
-        for surface in self.surfaces:
-            glColor4fv((1 - i / 3, i / 3, 0.5, self.alpha))
-            for vertex in surface:
-                glVertex3fv(self.vertices[vertex])
-            i += 1
-        glEnd()
-
-class UnitTetrahedron(Tetrahedron):
-    def __init__(self):
-        super().__init__(1, 0, 0, 0)
-        self.type = "UnitTetrahedron"
+    def applyCustomMatrix(self, mat):
+        if abs(np.matrix(mat).sum()) < 0.001 or abs((np.matrix(mat) - np.identity(4)).sum()) < 0.001:
+            return
+        else:
+            self.updateMatrix([np.array(mat), "Custom", Shadow()], True)
+            return Shadow()
 
 def drawAxes():
     plane_points = [[-10, -10, 0],
@@ -296,23 +261,39 @@ def drawAxes():
     glVertex3fv(axe_points[5])
     glEnd()
 
-class Line(Shape):
+class Line():
     def __init__(self, a1, a2, a3, d1, d2, d3):
-        super().__init__()
-        self.type = "Line"
+        self.isActive = False
+        self.vis = True
         self.a1 = a1
         self.a2 = a2
         self.a3 = a3
         self.d1 = d1
         self.d2 = d2
         self.d3 = d3
+        self.lst = [a1, a2, a3, d1, d2, d3]
+        self.name = f"Line: r = ({round(a1, 2)}, {round(a2, 2)}, {round(a3, 2)}) + t({round(d1, 2)}, {round(d2, 2)}, {round(d3, 2)})"
     
     def draw(self):
         glBegin(GL_LINES)
-        glColor3fv((1, 1, 1))
+        f = 1 if self.isActive else 0.6
+        glColor3fv((f, f, f))
         glVertex3fv([self.a1 - 500 * self.d1, self.a2 - 500 * self.d2, self.a3 - 500 * self.d3])
         glVertex3fv([self.a1 + 500 * self.d1, self.a2 + 500 * self.d2, self.a3 + 500 * self.d3])
         glEnd()
+    
+    def drawShadow(self):
+        glBegin(GL_LINES)
+        glColor3fv((1, 1, 0))
+        glVertex3fv([self.a1 - 500 * self.d1, self.a2 - 500 * self.d2, self.a3 - 500 * self.d3])
+        glVertex3fv([self.a1 + 500 * self.d1, self.a2 + 500 * self.d2, self.a3 + 500 * self.d3])
+        glEnd()
+    
+    def show(self):
+        self.vis = True
+    
+    def hide(self):
+        self.vis = False
 
 class Shadow:
     def __init__(self):
@@ -347,18 +328,20 @@ class Shadow:
             glVertex3fv(s[1])
         glEnd()
         for line in self.lines:
-            line.draw()
+            line.drawShadow()
         for plane in self.planes:
-            plane.draw()
+            plane.drawShadow()
 
-class Plane(Shape):
+class Plane():
     def __init__(self, a, b, c, d):
-        super().__init__()
-        self.type = "Line"
+        self.isActive = False
+        self.vis = True
         self.a = a
         self.b = b
         self.c = c
         self.d = d
+        self.lst = [a, b, c, d]
+        self.name = f"Plane: {round(a, 2)}x + {round(b, 2)}y + {round(c, 2)}z = {round(d, 2)}"
     
     def draw(self):
         if self.a != 0 and self.b != 0:
@@ -370,8 +353,35 @@ class Plane(Shape):
         normal = normal/np.linalg.norm(normal)
         perp1 = np.array(perp1)/np.linalg.norm(perp1)
         perp2 = np.cross(normal, perp1)
-        perp1 = 5 * perp1
-        perp2 = 5 * perp2
+        perp1 = 10 * perp1
+        perp2 = 10 * perp2
+        plane_points = [[pt[0] - perp1[0] - perp2[0], pt[1] - perp1[1] - perp2[1], pt[2] - perp1[2] - perp2[2]],
+                        [pt[0] - perp1[0] + perp2[0], pt[1] - perp1[1] + perp2[1], pt[2] - perp1[2] + perp2[2]],
+                        [pt[0] + perp1[0] + perp2[0], pt[1] + perp1[1] + perp2[1], pt[2] + perp1[2] + perp2[2]],
+                        [pt[0] + perp1[0] - perp2[0], pt[1] + perp1[1] - perp2[1], pt[2] + perp1[2] - perp2[2]]]
+    
+        plane_edges = [[0, 1], [1, 2], [2, 3], [3, 0]]
+    
+        glBegin(GL_QUADS)
+        f = 0.7 if self.isActive else 0.3
+        for edge in plane_edges:
+            for vertex in edge:
+                glColor4fv((0.7, 0.7, 0.7, f))
+                glVertex3fv(plane_points[vertex])
+        glEnd()
+    
+    def drawShadow(self):
+        if self.a != 0 and self.b != 0:
+            perp1 = [1, -self.a/self.b, 0]
+        else:
+            perp1 = [int(self.a == 0), int(self.b == 0), int(self.c == 0)]
+        normal = np.array([self.a, self.b, self.c])
+        pt = normal * self.d/(np.linalg.norm(normal) ** 2)
+        normal = normal/np.linalg.norm(normal)
+        perp1 = np.array(perp1)/np.linalg.norm(perp1)
+        perp2 = np.cross(normal, perp1)
+        perp1 = 10 * perp1
+        perp2 = 10 * perp2
         plane_points = [[pt[0] - perp1[0] - perp2[0], pt[1] - perp1[1] - perp2[1], pt[2] - perp1[2] - perp2[2]],
                         [pt[0] - perp1[0] + perp2[0], pt[1] - perp1[1] + perp2[1], pt[2] - perp1[2] + perp2[2]],
                         [pt[0] + perp1[0] + perp2[0], pt[1] + perp1[1] + perp2[1], pt[2] + perp1[2] + perp2[2]],
@@ -382,6 +392,12 @@ class Plane(Shape):
         glBegin(GL_QUADS)
         for edge in plane_edges:
             for vertex in edge:
-                glColor4fv((0.7, 0.7, 0.7, 0.7))
+                glColor4fv((0.3, 0.7, 0.7, 0.3))
                 glVertex3fv(plane_points[vertex])
         glEnd()
+    
+    def show(self):
+        self.vis = True
+
+    def hide(self):
+        self.vis = False

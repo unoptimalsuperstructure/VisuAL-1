@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>VisuAL-1 3d view</title>
+<link rel="stylesheet" href="../BaseStyle.css"/>
+<link rel="stylesheet" href="3d.css"/>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">Milestone 2</div>
+  <div class="spacer"></div>
+  <a class="topbar-back" href="../Home.html">← Home</a>
+  <!-- Maybe log in button? -->
+</div>
+
+<div id="main">
+  <div id="sidebar">
+    <div class="section">
+      <div class="section-head" id="shead-objects" onclick="toggleSection('objects')">
+        Objects
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span id="obj-count-badge" class="tag">1</span>
+        </span>
+      </div>
+      <div class="section-body" id="section-objects">
+        <div id="obj-list"></div>
+        <button class="btn primary" onclick="toggleAddMenu()" id="add-obj-btn">
+          Add Object
+        </button>
+        <div id="add-menu">
+          <div class="menu-header">Choose type</div>
+          <div id="shape-options"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head" id="shead-transforms" onclick="toggleSection('transforms')">
+        Transformations
+      </div>
+      <div class="section-body" id="section-transforms">
+        <button class="btn" onclick="openModal('translate')">
+          Translate
+        </button>
+        <button class="btn" onclick="openModal('reflectLine')">
+           Reflect about Line
+        </button>
+        <button class="btn" onclick="openModal('reflectPlane')">
+          Reflect about Plane
+        </button>
+        <button class="btn" onclick="openModal('rotate')">
+          Rotate
+        </button>
+        <button class="btn" onclick="undoLast()">
+          Undo
+        </button>
+        <button class="btn danger" onclick="askConfirm('reset')">
+          Reset (irreversible)
+        </button>
+        <button class="btn danger" onclick="askConfirm('delete')">
+          Delete object
+        </button>
+        <div id="confirm-bar">
+          <div id="confirm-msg"></div>
+          <div class="btn-row">
+            <button class="btn danger" onclick="doConfirm()">Confirm</button>
+            <button class="btn" onclick="cancelConfirm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="border-bottom:none">
+      <div class="section-head">Matrix Stack</div>
+    </div>
+    <div id="stack-panel">
+      <div id="stack-content">
+        <div id="no-obj">Select an object to view its matrix stack</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="viewport">
+    <canvas id="gl"></canvas>
+  </div>
+</div>
+
+<div id="modal-bg" class="modal-bg" style="display:none" onclick="closeModalBg(event)">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div class="desc" id="modal-desc"></div>
+    <div id="modal-fields"></div>
+    <div class="error-msg" id="modal-err"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitModal()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="matrix.js"></script>
+<script src="scene.js"></script>
+<script src="ui.js"></script>
+<script src="render.js"></script>
+</body>
+</html>
