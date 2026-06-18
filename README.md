@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.0**
+**Current version: v0.1.2b**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -7,13 +7,25 @@ Multi-purpose tool for visualising the applications of linear algebra, such as i
 As all of the libraries that this tool uses are licensed under GPLv3 (or more permissive licenses), this tool is also licensed under GPLv3.
 
 # Python Libraries required
-- Numpy
-- OpenCV-Python (only from v0.1.1a onwards)
+- NumPy
+- OpenCV-Python
+- PyMongo
 - PyOpenGL
 - PyQt6
 
 ## What to expect for the next update
-Next version: v0.1.1a - will include basic image processing features.
+Next version: v0.1.3a - Loading and saving JSON files to the localhost MongoDB database + TLS for creating a polygon and using it to form pyramids and prisms.
+
+# 2D Image Processing
+
+Features: Import images as you please and move them around the canvas. Perform a simple colour filter based on your desired tint, or apply convolutions (Blur, Sharpen, Edge detection (Sobel operator)). The same operation can be applied to multiple images at a time for better efficiency.
+
+Desktop App Controls (Moving Images):
+- WASD or Left Click and Drag to move the selected images around the canvas.
+- Z to move the image to the last position. (This is independent of undoing filters or convolutions.)
+- H to flip the image horizontally, V to flip the image vertically.
+
+**Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active image(s). All other features are tied to the currently active image(s).
 
 # 3D Visualiser
 
@@ -36,10 +48,36 @@ Web App Controls (Spherical Coordinates):
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
 
 # Known Bugs
-- (Desktop App) The camera panning code is based on the camera yaw, which does not update accurately when the camera is panned quickly. This may cause the camera to roll inadvertently and eventually mess up WASD movements. The only way to fix this is to middle-click.
-- (Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
+## High Priority
+~~- (2D Image Processing, Desktop App) Images are not garbage collected upon closing the window, which returns to the home screen. This will be fixed by the next update.~~ (Fixed in v0.1.1b)
+## Low Priority
+-  (3D Visualiser, Desktop App) The camera panning code is based on the camera yaw, which does not update accurately when the camera is panned quickly. This may cause the camera to roll inadvertently and eventually mess up WASD movements. The only way to fix this is to middle-click.
+- (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.2a -> v0.1.2b
+- Finally added shearing and custom matrices.
+- Switched from a class file holding all shapes to a single abstract class file, with geometric objects being represented as JSON files instead.
+- Shapes can also have their size and centre specified before adding.
+- Added interface size configuration file for 3D Visualiser.
+
+v0.1.1b -> v0.1.2a
+- Ability to draw permanent lines or planes that can be shown/hidden (but not yet deleted).
+- 3D objects can also now be shown/hidden, and the active object is highlighted.
+- Reflection, rotation and projection can now be done with permanent lines or planes, or still allow the user to input a one-time line or plane.
+- When choosing an existing line or plane for a transformation, it will be highlighted.
+- After a transformation, the respective line or plane will be distinguished by being coloured yellow or blue respectively.
+- Tooltips and icons showing what each operation does.
+
+v0.1.1a -> v0.1.1b
+- Fixed garbage collection.
+- Ability to show or hide images.
+- User is now prompted to choose a save directory, instead of being the same one as the input directory.
+
+v0.1.0a -> v0.1.1a
+- Added basic image processing features to the desktop app, including colour tint filters, median and Gaussian blur, and Sobel edge detection.
+- Closing the 2D image processing or 3D graphics sandbox now returns to the home screen instead of terminating the program.
+
 v0.0.3c -> v0.1.0a
 - Merged Desktop App v0.0.3c and Web App to the main branch.
 
