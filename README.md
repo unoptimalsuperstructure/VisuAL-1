@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.2b**
+**Current version: v0.1.3a**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -14,7 +14,7 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyQt6
 
 ## What to expect for the next update
-Next version: v0.1.3a - Loading and saving JSON files via a localhost MongoDB database + TLS for creating a polygon and using it to form pyramids and prisms.
+Next version: v0.1.3b - Loading and saving shapes as JSON files via a localhost MongoDB database
 
 # 2D Image Processing
 
@@ -55,6 +55,9 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.2b -> v0.1.3a
+- Pass in a CSV representing either (x, y) coordinates or (x, y, z) coordinates, find the best fit polygon in the latter case, and use it as a base for pyramids and prisms. (This single feature took me several hours lol)
+
 v0.1.2a -> v0.1.2b
 - Finally added shearing and custom matrices.
 - Permanent lines or planes drawn by the user can now be deleted.
