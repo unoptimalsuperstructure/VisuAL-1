@@ -102,7 +102,7 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.2b - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3a - Home")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -160,7 +160,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.2b - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3a - 2D Image Processing")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -201,7 +201,7 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.2b - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3a - 3D Visualiser")
         f1 = open("sizeconfig.txt")
         self.size = int(f1.readline())
         f1.close()

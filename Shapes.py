@@ -3,10 +3,102 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from copy import deepcopy
 
+def tlsplane(lst):
+    try:
+        for i in range(len(lst)):
+            for j in range(len(lst[0])):
+                lst[i][j] = float(lst[i][j])
+        temp = np.matrix(lst, dtype = 'float64')
+        if temp.shape[1] not in (2, 3) or temp.shape[0] < 3:
+            print(1/0)
+        elif temp.shape[1] == 2:
+            temp = np.block([temp, np.matrix([[0]]*len(temp))])
+            edges = []
+            for i in range(len(lst)):
+                edges.append([i, (i + 1) % len(lst)])
+            return [Polygon(temp, edges)]
+    except:
+        return "Error: Invalid data or not enough data points"
+    mat = []
+    avg = np.array([0.0, 0.0, 0.0])
+    for vec in temp:
+        avg = avg + vec
+    avg /= len(temp)
+    for vec in temp:
+        mat.append(list((vec - avg).A1))
+    mat = np.matrix(mat).transpose()*np.matrix(mat)
+    svd = np.linalg.svd(mat)
+    if abs(svd[1][0]) < 0.001 or abs(svd[1][1]) < 0.001:
+        return "Error: At least one of the two largest eigenvalues is almost zero. Your points cannot be well-fitted to a plane."
+    elif svd[1][2] != 0 and 1/1.001 < svd[1][1]/svd[1][2] < 1.001:
+        return "Error: The two smallest eigenvalues are too close. Your points cannot be well-fitted to a plane."
+    else:
+        a, b, c, d = *svd[2][2].A1, np.dot(svd[2][2], avg.A1).A1[0]
+        proj = np.array([[1 - a ** 2, -a * b, -a * c, a * d],
+                         [-a * b, 1 - b ** 2, -b * c, b * d],
+                         [-a * c, -b * c, 1 - c ** 2, c * d],
+                         [0, 0, 0, 1]])
+        vecs = []
+        for i in range(len(temp)):
+            vec = temp[i].tolist()[0]
+            vecs.append(np.matmul(proj, np.matrix([[vec[0]], [vec[1]], [vec[2]], [1]])).transpose().tolist()[0][:-1])
+        edges = []
+        for i in range(len(lst)):
+            edges.append([i, (i + 1) % len(lst)])
+        return [Polygon(vecs, edges), *svd[2][2].A1, np.dot(svd[2][2], avg.A1).A1[0]]
+
 class Polygon:
     def __init__(self, vertices, edges):
-        self.vertices = vertices
-        self.edges = edges
+        self.name = "Polygon"
+        self.vertices = vertices.tolist() if isinstance(vertices, np.matrix) or isinstance(vertices, np.ndarray) else vertices
+        self.edges = edges.tolist() if isinstance(edges, np.matrix) or isinstance(edges, np.ndarray) else edges
+    
+    def draw(self):
+        glBegin(GL_POLYGON)
+        glColor4fv((1, 0.8, 0.4, 0.7))
+        for i in range(len(self.vertices)):
+            glVertex3fv(self.vertices[i])
+        glEnd()
+    
+    def makePyramid(self, a, b, c):
+        solid = Solid("Custom Pyramid", self.vertices, self.edges, [], [1, 0, 0, 0])
+        L = len(self.vertices)
+        for i in range(L):
+            solid.edges.append([i, L])
+        for i in range(L):
+            solid.surfaces.append([i, (i + 1) % L, L])
+        solid.vertices.append([a, b, c])
+        solid.surfaces.append(list(range(L)))
+
+        centre = np.array([0, 0, 0])
+        for vertex in solid.vertices:
+            centre = centre + vertex
+        centre /= len(solid.vertices)
+        solid.vertices.append(centre.tolist())
+
+        solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
+        return solid
+    
+    def makePrism(self, norm, h):
+        solid = Solid("Custom Prism", self.vertices, self.edges, [], [1, 0, 0, 0])
+        L = len(self.vertices)
+        for i in range(L):
+            solid.edges.append([L + i, (i + 1) % L + L])
+            solid.edges.append([i, L + i])
+            solid.vertices.append((np.matrix(self.vertices[i]) + np.matrix(norm) * h).tolist()[0])
+        for i in range(L):
+            solid.surfaces.append([i, (i + 1) % L, (i + 1) % L + L, L + i])
+        solid.surfaces.append(list(range(L)))
+        solid.surfaces.append(list(range(L, 2 * L)))
+
+        centre = np.array([0, 0, 0])
+        for vertex in solid.vertices:
+            centre = centre + vertex
+        centre /= len(solid.vertices)
+        solid.vertices.append(centre.tolist())
+
+        solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
+        return solid
 
 class Solid:
     def __init__(self, name, vertices, edges, surfaces, params):
@@ -40,7 +132,7 @@ class Solid:
     
     def draw(self):
         if self.show:
-            glBegin(GL_QUADS)
+            glBegin(GL_POLYGON)
             i = 0
             a = 1 if self.isActive else 0.8
             for surface in self.surfaces:

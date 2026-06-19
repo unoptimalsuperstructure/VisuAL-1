@@ -37,6 +37,7 @@ class ThreeDViewer(QOpenGLWidget):
             self.objects.append(Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], [1, 0, 0, 0]))
         self.lastObjStack = self.objects.copy()
         self.linesPlanes = []
+        self.tempPolygon = None
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.perform_action)
@@ -93,11 +94,13 @@ class ThreeDViewer(QOpenGLWidget):
         for obj in self.linesPlanes:
             if obj.vis or obj.isActive:
                 obj.draw()
+        if self.tempPolygon:
+            self.tempPolygon.draw()
         for obj in self.objects:
             obj.draw()
         if self.lastObjStack:
             lastObj = self.lastObjStack[-1]
-            if lastObj.show:
+            if lastObj.show and isinstance(lastObj, Shapes.Solid):
                 lastObj.getShadow().draw()
 
     def mousePressEvent(self, event):
@@ -527,13 +530,38 @@ class ThreeDSidePanel(QVBoxLayout):
         self.window.params.connect(self.addShape)
     
     def addShape(self, params):
-        shape, nums = params[0], params[1:]
-        solid = self.viewer.solids.find_one({"name": shape})
-        obj = Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], nums)
-        self.viewer.objects.append(obj)
-        self.viewer.lastObjStack.append(obj)
-        self.objectPanel.addButton(obj)
-    
+        if isinstance(params[0], ThreeDWindows.ErrorWindow):
+            params[0].show()
+        elif params[0] == "Custom!":
+            self.window = ThreeDWindows.CustomPolygonWindow()
+            self.window.show()
+            self.window.params.connect(self.addShape)
+        elif isinstance(params[0][0], Shapes.Polygon):
+            self.viewer.tempPolygon = params[0][0]
+            self.viewer.update()
+            self.window = ThreeDWindows.CustomSolidWindow(params[0][1])
+            self.window.show()
+            self.window.params.connect(self.addShape)
+        elif params[0] == "Pyramid":
+            obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:])
+            self.viewer.objects.append(obj)
+            self.viewer.lastObjStack.append(obj)
+            self.objectPanel.addButton(obj)
+        elif params[0] == "Prism":
+            obj = Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:])
+            self.viewer.objects.append(obj)
+            self.viewer.lastObjStack.append(obj)
+            self.objectPanel.addButton(obj)
+        elif params[0] == "Close":
+            self.viewer.tempPolygon = None
+        else:
+            shape, nums = params[0], params[1:]
+            solid = self.viewer.solids.find_one({"name": shape})
+            obj = Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], nums)
+            self.viewer.objects.append(obj)
+            self.viewer.lastObjStack.append(obj)
+            self.objectPanel.addButton(obj)
+
     def showHide(self):
         if self.activeObj:
             self.activeObj.showhide()
