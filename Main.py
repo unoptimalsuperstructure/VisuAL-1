@@ -5,7 +5,9 @@ from PyQt6.QtCore import QEvent, Qt
 from TwoDImages import TwoDViewer, TwoDSidePanel
 from ThreeDGraphics import ThreeDViewer, ThreeDSidePanel
 from Images import Image
-import Shapes
+import Shapes, json
+from bson import json_util
+from pymongo import MongoClient
 
 class HomeBar(QHBoxLayout):
     def __init__(self):
@@ -73,7 +75,7 @@ class OptionPanel(QVBoxLayout):
                 img.hide()
                 label.show()
                 self.hover = False
-    
+        
         return super().eventFilter(obj, event)
     
     def TwoDee(self):
@@ -82,7 +84,7 @@ class OptionPanel(QVBoxLayout):
         self.mainWindow.close()
 
     def ThreeDee(self):
-        self.newWindow = ThreeDMainWindow()
+        self.newWindow = ThreeDMainWindow([], [], [])
         self.newWindow.show()
         self.mainWindow.close()
 
@@ -102,7 +104,7 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.3a - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3b - Home")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -160,7 +162,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.3a - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3b - 2D Image Processing")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -198,14 +200,14 @@ class TwoDMainWindow(QMainWindow):
         event.accept()
 
 class ThreeDMainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.3a - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.1.3b - 3D Visualiser")
         f1 = open("sizeconfig.txt")
         self.size = int(f1.readline())
         f1.close()
-        self.viewer = ThreeDViewer(["Cube"])
+        self.viewer = ThreeDViewer(shapes, linesPlanes, namespace)
         if self.size == 1:
             self.resize(800, 600)
             self.viewer.setFixedSize(560, 420)
@@ -216,14 +218,16 @@ class ThreeDMainWindow(QMainWindow):
             self.resize(1280, 720)
         else:
             sys.exit()
+        
+        self.openMainWindowOnClose = True
 
         toolbar = QToolBar("Toolbar")
         self.addToolBar(toolbar)
 
         load = QAction("Load", self)
-        #load.triggered.connect(self.load)
+        load.triggered.connect(self.load)
         save = QAction("Save", self)
-        #save.triggered.connect(self.save)
+        save.triggered.connect(self.save)
         toolbar.addAction(load)
         toolbar.addAction(save)
 
@@ -246,7 +250,84 @@ class ThreeDMainWindow(QMainWindow):
         sidePanel.setLayout(sidePanelLayout)
         self.mainLayout.addWidget(self.viewer, stretch = 3)
         self.mainLayout.addWidget(sidePanel, stretch = 1)
-    
+
+    def load(self):
+        file_path = QFileDialog.getOpenFileName(
+            None,
+            "Select Shapes",
+            "",
+            "JSON File (*.json)"
+        )[0]
+        if file_path:
+            with open(file_path, "r") as file:
+                dics = json.load(file)
+            initShapes = []
+            initLinesPlanes = []
+            i = 0
+            for j in range(len(dics) - 1):
+                obj = None
+                while not obj:
+                    obj = dics[j].get(str(i))
+                    if obj and "Line" in obj['name']:
+                        initLinesPlanes.append(Shapes.Line(obj['a1'], obj['a2'], obj['a3'], obj['d1'], obj['d2'], obj['d3']))
+                    elif obj and "Plane" in obj['name']:
+                        initLinesPlanes.append(Shapes.Plane(obj['a'], obj['b'], obj['c'], obj['d']))
+                    elif obj:
+                        initShapes.append(Shapes.Solid(obj['name'], obj['vertices'], obj['edges'], obj['surfaces'], obj['params']))
+                    i += 1
+            
+            self.newWindow = ThreeDMainWindow(initShapes, initLinesPlanes, dics[-1]['namespace'])
+            self.newWindow.show()
+            self.openMainWindowOnClose = False
+            self.close()
+
+    def save(self):
+        data = []
+        i = 0
+        for obj in self.viewer.objects:
+            data.append({str(i):
+            {
+                "name": obj.name,
+                "vertices": obj.vertices,
+                "edges": obj.edges,
+                "surfaces": obj.surfaces,
+                "params": obj.params
+            }})
+            i += 1
+        for obj in self.viewer.linesPlanes:
+            if isinstance(obj, Shapes.Line):
+                data.append({str(i):
+                {
+                    "name": obj.name,
+                    "a1": obj.a1,
+                    "a2": obj.a2,
+                    "a3": obj.a3,
+                    "d1": obj.d1,
+                    "d2": obj.d2,
+                    "d3": obj.d3
+                }})
+            else:
+                data.append({str(i):
+                {
+                    "name": obj.name,
+                    "a": obj.a,
+                    "b": obj.b,
+                    "c": obj.c,
+                    "d": obj.d
+                }})
+            i += 1
+        data.append({"namespace": self.viewer.namespace})
+        
+        file_path = QFileDialog.getSaveFileName(
+        None,
+        "Save...",
+        "",
+        "JSON File (*.json)"
+        )[0]
+        if file_path:
+            with open("data.json", "w") as f:
+                json.dump(data, f, indent=4)
+
     def resizeEvent(self, event):
         if self.size == 3:
             w = event.size().width()
@@ -259,8 +340,9 @@ class ThreeDMainWindow(QMainWindow):
             self.mainLayout.setStretch(1, 3 * w - 4 * h)
     
     def closeEvent(self, event):
-        self.window = HomeWindow()
-        self.window.show()
+        if self.openMainWindowOnClose:
+            self.window = HomeWindow()
+            self.window.show()
         event.accept()
 
 app = QApplication(sys.argv)

@@ -28,6 +28,10 @@ class ErrorWindow(QWidget):
             self.layout.addWidget(QLabel("Zero direction vector or normal vector is not allowed. Please try again."))
         elif type == 3:
             self.layout.addWidget(QLabel("This line or plane already exists. Please try again."))
+        elif type == 4:
+            self.layout.addWidget(QLabel("Name must be non-empty and alphanumeric only. Please try again."))
+        elif type == 5:
+            self.layout.addWidget(QLabel("This name is already in use. Please try again."))
         else:
             self.layout.addWidget(QLabel("Unknown error occurred."))
         self.submit = QPushButton("OK")
@@ -1034,8 +1038,15 @@ class AddShapeWindow(QWidget):
         self.setWindowTitle("Add Shape")
 
         self.item = None
-        self.layout = QVBoxLayout()
-        self.layout.addWidget(QLabel("Select a shape to add."))
+        self.layout = QGridLayout()
+        self.layout.addWidget(QLabel("Select a shape to add."), 0, 0, 1, 2)
+
+        selectShapeArea = QScrollArea()
+        selectShapeArea.setWidgetResizable(True)
+        selectShapeArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        selectShapeArea.setFixedHeight(100)
+        selectShapeLayout = QVBoxLayout()
+        selectShapeLayout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
 
         self.buttons = []
 
@@ -1043,41 +1054,19 @@ class AddShapeWindow(QWidget):
             button = QRadioButton(solid["name"])
             button.type = solid["name"]
             button.toggled.connect(self.onToggle)
-            self.layout.addWidget(button)
+            selectShapeLayout.addWidget(button)
             self.buttons.append(button)
         
         addCustomSolidButton = QRadioButton("Add new Solid...")
         addCustomSolidButton.type = "Custom!"
         addCustomSolidButton.toggled.connect(self.onToggle)
-        self.layout.addWidget(addCustomSolidButton)
+        selectShapeLayout.addWidget(addCustomSolidButton)
         self.buttons.append(addCustomSolidButton)
 
-        self.layout.addWidget(QLabel("You can specify the size and centre. Default is size 1 at the origin."))
-
-        self.inputSize = QLineEdit("1")
-        self.inputC1 = QLineEdit("0")
-        self.inputC2 = QLineEdit("0")
-        self.inputC3 = QLineEdit("0")
-        self.inputSize.setFixedWidth(50)
-        self.inputC1.setFixedWidth(50)
-        self.inputC2.setFixedWidth(50)
-        self.inputC3.setFixedWidth(50)
-
-        footer = QWidget()
-        footerLayout = QHBoxLayout()
-        footerLayout.addWidget(QLabel("Size:"))
-        footerLayout.addWidget(self.inputSize)
-        footerLayout.addWidget(QLabel("Centre: ("))
-        footerLayout.addWidget(self.inputC1)
-        footerLayout.addWidget(self.inputC2)
-        footerLayout.addWidget(self.inputC3)
-        footerLayout.addWidget(QLabel(")"))
-        footer.setLayout(footerLayout)
-        self.layout.addWidget(footer)
-
-        submit = QPushButton("Submit")
-        submit.clicked.connect(self.send)
-        self.layout.addWidget(submit)
+        selectShape = QWidget()
+        selectShape.setLayout(selectShapeLayout)
+        selectShapeArea.setWidget(selectShape)
+        self.layout.addWidget(selectShapeArea, 1, 0, 1, 2)
         
         self.setLayout(self.layout)
     
@@ -1085,17 +1074,81 @@ class AddShapeWindow(QWidget):
         rb = self.sender()
         if rb.isChecked():
             self.item = self.buttons[self.buttons.index(rb)].type
+            if rb.type != "Custom!":
+                self.lab = QLabel("You can specify the size and offset. Default is size 1 with no offset.")
+                try:
+                    self.layout.removeWidget(self.submit)
+                    self.submit.deleteLater()
+                    self.layout.removeWidget(self.delLater)
+                    self.delLater.deleteLater()
+                except:
+                    pass
+                self.submit = QPushButton("Submit")
+                self.submit.clicked.connect(self.send)
+                self.delLater = QPushButton("Delete")
+                self.delLater.clicked.connect(self.delete)
+                self.layout.addWidget(self.lab, 2, 0, 1, 2)
+
+                self.inputSize = QLineEdit("1")
+                self.inputC1 = QLineEdit("0")
+                self.inputC2 = QLineEdit("0")
+                self.inputC3 = QLineEdit("0")
+                self.inputSize.setFixedWidth(50)
+                self.inputC1.setFixedWidth(50)
+                self.inputC2.setFixedWidth(50)
+                self.inputC3.setFixedWidth(50)
+
+                self.footer = QWidget()
+                self.footerLayout = QHBoxLayout()
+                self.footerLayout.addWidget(QLabel("Size:"))
+                self.footerLayout.addWidget(self.inputSize)
+                self.footerLayout.addWidget(QLabel("Offset: ("))
+                self.footerLayout.addWidget(self.inputC1)
+                self.footerLayout.addWidget(self.inputC2)
+                self.footerLayout.addWidget(self.inputC3)
+                self.footerLayout.addWidget(QLabel(")"))
+                self.footer.setLayout(self.footerLayout)
+                self.layout.addWidget(self.footer, 3, 0, 1, 2)
+                self.layout.addWidget(self.submit, 4, 0)
+                self.layout.addWidget(self.delLater, 4, 1)
+            else:
+                try:
+                    self.layout.removeWidget(self.lab)
+                    self.lab.deleteLater()
+                    self.layout.removeWidget(self.footer)
+                    self.footer.deleteLater()
+                    self.layout.removeWidget(self.submit)
+                    self.submit.deleteLater()
+                    self.layout.removeWidget(self.delLater)
+                    self.delLater.deleteLater()
+                except:
+                    pass
+                finally:
+                    self.submit = QPushButton("Submit")
+                    self.submit.clicked.connect(self.send)
+                    self.layout.addWidget(self.submit, 2, 0, 1, 2)
+                    QTimer.singleShot(0, self.shrink)
+
         else:
             self.item = None
+            self.layout.removeWidget(self.submit)
+            self.submit.deleteLater()
+            QTimer.singleShot(0, self.shrink)
+    
+    def shrink(self):
+        self.layout.activate()
+        self.adjustSize()
 
     def send(self):
+        if self.item == "Custom!":
+            self.params.emit(["Custom!"])
+            self.close()
+            return
         size = num(self.inputSize.text())
         c1 = num(self.inputC1.text())
         c2 = num(self.inputC2.text())
         c3 = num(self.inputC3.text())
-        if self.item == "Custom!":
-            self.params.emit(["Custom!"])
-        elif not self.item:
+        if not self.item:
             self.error = ErrorWindow(0, self)
             self.error.show()
         elif size == None or c1 == None or c2 == None or c3 == None:
@@ -1105,25 +1158,100 @@ class AddShapeWindow(QWidget):
             self.params.emit([self.item, size, c1, c2, c3])
         self.close()
     
+    def delete(self):
+        self.params.emit(["DeleteSolid!", self.item])
+        self.close()
+    
     def closeEvent(self, event):
         event.accept()
 
 class CustomPolygonWindow(QWidget):
     params = pyqtSignal(list)
 
-    def __init__(self):
+    def __init__(self, polygons):
         super().__init__()
         self.setWindowTitle("Custom Polygon")
 
+        selectPolygonArea = QScrollArea()
+        selectPolygonArea.setWidgetResizable(True)
+        selectPolygonArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        selectPolygonArea.setFixedHeight(100)
+        selectPolygonLayout = QVBoxLayout()
+
         self.layout = QGridLayout()
-        self.layout.addWidget(QLabel("Upload a CSV of vertices which defines a polygon.\n" \
-                                     "Each line should either have exactly 2 numbers, or\n" \
-                                     "exactly 3 numbers. In the latter case, the best fit\n" \
-                                     "polygon will be calculated."))
-        uploadButton = QPushButton("Upload")
-        uploadButton.clicked.connect(self.loadCSV)
-        self.layout.addWidget(uploadButton, 0, 1)
+        self.buttons = []
+
+        self.layout.addWidget(QLabel("Choose an existing polygon, or make a new one:"), 0, 0, 1, 2)
+
+        for poly in polygons:
+            button = QRadioButton(poly["name"])
+            button.type = [Shapes.Polygon(poly["name"], poly["vertices"], poly["edges"], poly["normal"]), None, False]
+            button.toggled.connect(self.onToggle)
+            selectPolygonLayout.addWidget(button)
+            self.buttons.append(button)
+        
+        addNewPolygonButton = QRadioButton("Add new Polygon...")
+        addNewPolygonButton.toggled.connect(self.onToggleNew)
+        self.buttons.append(addNewPolygonButton)
+        selectPolygonLayout.addWidget(addNewPolygonButton)
+        
+        selectPolygon = QWidget()
+        selectPolygon.setLayout(selectPolygonLayout)
+        selectPolygonArea.setWidget(selectPolygon)
+        self.layout.addWidget(selectPolygonArea, 1, 0, 1, 2)
+
         self.setLayout(self.layout)
+    
+    def onToggle(self):
+        rb = self.sender()
+        try:
+            self.layout.removeWidget(self.newPolygon)
+            self.newPolygon.deleteLater()
+        except:
+            pass
+        try:
+            self.layout.removeWidget(self.submit)
+            self.submit.deleteLater()
+            self.layout.removeWidget(self.delLater)
+            self.delLater.deleteLater()
+        except:
+            pass
+        if rb.isChecked():
+            self.polygon = self.buttons[self.buttons.index(rb)].type
+            self.submit = QPushButton("Submit")
+            self.submit.clicked.connect(self.send)
+            self.delLater = QPushButton("Delete")
+            self.delLater.clicked.connect(self.delete)
+            self.layout.addWidget(self.submit, 2, 0)
+            self.layout.addWidget(self.delLater, 2, 1)
+        else:
+            self.polygon = None
+        self.params.emit([self.polygon])
+    
+    def onToggleNew(self):
+        rb = self.sender()
+        try:
+            self.layout.removeWidget(self.newPolygon)
+            self.newPolygon.deleteLater()
+        except:
+            pass
+        try:
+            self.layout.removeWidget(self.submit)
+            self.submit.deleteLater()
+        except:
+            pass
+        if rb.isChecked():
+            self.newPolygon = QWidget()
+            self.newPolygonLayout = QGridLayout()
+            self.newPolygonLayout.addWidget(QLabel("Upload a CSV of vertices which defines a polygon.\n" \
+                                                   "Each line should either have exactly 2 numbers, or\n" \
+                                                   "exactly 3 numbers. In the latter case, the best fit\n" \
+                                                   "polygon will be calculated."), 0, 0)
+            uploadButton = QPushButton("Upload")
+            uploadButton.clicked.connect(self.loadCSV)
+            self.newPolygonLayout.addWidget(uploadButton, 0, 1)
+            self.newPolygon.setLayout(self.newPolygonLayout)
+            self.layout.addWidget(self.newPolygon)
 
     def loadCSV(self):
         file_path = QFileDialog.getOpenFileName(
@@ -1136,8 +1264,10 @@ class CustomPolygonWindow(QWidget):
         if not file_path:
             return
         
+        self.destroy = True
+        
         try:
-            self.layout.removeWidget(self.response)
+            self.newPolygonLayout.removeWidget(self.response)
         except:
             pass
         mat = []
@@ -1147,33 +1277,58 @@ class CustomPolygonWindow(QWidget):
             for row in reader:
                 mat.append(row)
 
-        
-        self.result = Shapes.tlsplane(mat)
-        if isinstance(self.result[0], Shapes.Polygon):
-            if len(self.result) > 1:
-                self.response = QLabel("3D points parsed successfully!")
-                self.is3D = True
-                self.polygon = [self.result[0], self.result[1:-1]]
-                self.eqn = QLabel(f"Equation of plane: {round(self.result[1], 3)}x + {round(self.result[2], 3)}y + {round(self.result[3], 3)}z = {round(self.result[4], 3)}")
-                self.layout.addWidget(self.eqn, 2, 0, 1, 2)
-            else:
-                self.response = QLabel("2D points parsed successfully!")
-                self.is3D = False
-                self.polygon = [self.result[0], [0, 0, 1]]
-        else:
-            self.response = QLabel(self.result)
-            self.is3D = False
-        self.layout.addWidget(self.response, 1, 0)
-        
         try:
             self.layout.removeWidget(self.submit)
             self.submit.deleteLater()
         except:
             pass
+        try:
+            self.newPolygonLayout.removeWidget(self.lab)
+            self.lab.deleteLater()
+        except:
+            pass
+        try:
+            self.newPolygonLayout.removeWidget(self.response)
+            self.response.deleteLater()
+        except:
+            pass
+        try:
+            self.newPolygonLayout.removeWidget(self.eqn)
+            self.eqn.deleteLater()
+        except:
+            pass
+        try:
+            self.newPolygonLayout.removeWidget(self.name)
+            self.name.deleteLater()
+        except:
+            pass
+        
+        self.result = Shapes.tlsplane(mat)
+        if isinstance(self.result[0], Shapes.Polygon):
+            self.lab = QLabel("Name your polygon:")
+            self.name = QLineEdit()
+            if len(self.result) > 1:
+                self.response = QLabel("3D points parsed successfully!")
+                self.is3D = True
+                self.polygon = [self.result[0], self.result[1:-1], -1]
+                self.eqn = QLabel(f"Equation of plane: {round(self.result[0].normal[0], 3)}x + {round(self.result[0].normal[1], 3)}y + {round(self.result[0].normal[2], 3)}z = {round(self.result[1], 3)}")
+                self.newPolygonLayout.addWidget(self.eqn, 2, 0, 1, 2)
+                self.newPolygonLayout.addWidget(self.lab, 3, 0)
+                self.newPolygonLayout.addWidget(self.name, 3, 1)
+            else:
+                self.response = QLabel("2D points parsed successfully!")
+                self.is3D = False
+                self.polygon = [self.result[0], [0, 0, 1], -1]
+                self.newPolygonLayout.addWidget(self.lab, 2, 0)
+                self.newPolygonLayout.addWidget(self.name, 2, 1)
+        else:
+            self.response = QLabel(self.result)
+            self.is3D = False
+        self.newPolygonLayout.addWidget(self.response, 1, 0)
         
         if not self.is3D:
             try:
-                self.layout.removeWidget(self.eqn)
+                self.newPolygonLayout.removeWidget(self.eqn)
                 self.eqn.deleteLater()
             except:
                 pass
@@ -1181,13 +1336,35 @@ class CustomPolygonWindow(QWidget):
         if not isinstance(self.result, str):
             self.submit = QPushButton("Submit")
             self.submit.clicked.connect(self.send)
-            self.layout.addWidget(self.submit, 1, 1)
+            self.layout.addWidget(self.submit)
     
     def send(self):
-        self.params.emit([self.polygon])
+        em = True
+        try:
+            name = self.name.text()
+            self.polygon[0].name = name
+        except:
+            name = self.polygon[0].name
+        if self.polygon[2] in (-1, False):
+            if not name or not name.isalnum():
+                em = False
+                self.error = ErrorWindow(4, self)
+                self.params.emit([self.error])
+            elif self.polygon[2] == False:
+                self.polygon[2] = True
+        if em:
+            self.params.emit([self.polygon])
+        self.destroy = False
+        self.close()
+    
+    def delete(self):
+        self.params.emit(["DeletePolygon!", self.polygon[0].name])
+        self.destroy = False
         self.close()
     
     def closeEvent(self, event):
+        if self.destroy:
+            self.params.emit(["Close!"])
         event.accept()
 
 class CustomSolidWindow(QWidget):
@@ -1196,8 +1373,10 @@ class CustomSolidWindow(QWidget):
     def __init__(self, norm):
         super().__init__()
         self.setWindowTitle("Custom Solid")
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
         self.norm = norm
+
+        self.destroy = True
             
         addNewPyramid = QRadioButton("Pyramid")
         addNewPyramid.setObjectName("newPyramid")
@@ -1206,10 +1385,15 @@ class CustomSolidWindow(QWidget):
         addNewPrism.setObjectName("newPrism")
         addNewPrism.toggled.connect(self.onToggle)
 
-        self.layout.addWidget(QLabel("Make a prism or pyramid using your base polygon:"))
+        self.layout.addWidget(QLabel("Make a prism or pyramid using your base polygon:"), 0, 0, 1, 2)
         
-        self.layout.addWidget(addNewPyramid)
-        self.layout.addWidget(addNewPrism)
+        self.layout.addWidget(addNewPyramid, 1, 0)
+        self.layout.addWidget(addNewPrism, 1, 1)
+
+        self.layout.addWidget(QLabel("Name your solid:"), 2, 0)
+        self.name = QLineEdit()
+        self.layout.addWidget(self.name, 2, 1)
+
         self.setLayout(self.layout)
     
     def onToggle(self):
@@ -1218,73 +1402,96 @@ class CustomSolidWindow(QWidget):
             try:
                 self.layout.removeWidget(self.input)
                 self.input.deleteLater()
+            except:
+                pass
+            try:
                 self.layout.removeWidget(self.submit)
                 self.submit.deleteLater()
-                QTimer.singleShot(0, self.shrink)
             except:
                 pass
             finally:
+                QTimer.singleShot(0, self.shrink)
                 self.input = QWidget()
-                self.inputLayout = QHBoxLayout()
-                self.inputLayout.addWidget(QLabel("Enter the coordinates of the apex:"))
+                self.inputLayout = QGridLayout()
+                self.inputLayout.addWidget(QLabel("Enter the coordinates of the apex:"), 0, 0, 1, 4)
                 self.inputC1 = QLineEdit()
                 self.inputC2 = QLineEdit()
                 self.inputC3 = QLineEdit()
+                self.inputC1.setFixedWidth(50)
+                self.inputC2.setFixedWidth(50)
+                self.inputC3.setFixedWidth(50)
                 self.submit = QPushButton("Submit")
                 self.submit.clicked.connect(self.sendPyramid)
-                self.inputLayout.addWidget(self.inputC1)
-                self.inputLayout.addWidget(self.inputC2)
-                self.inputLayout.addWidget(self.inputC3)
-                self.inputLayout.addWidget(self.submit)
+                self.inputLayout.addWidget(self.inputC1, 1, 0)
+                self.inputLayout.addWidget(self.inputC2, 1, 1)
+                self.inputLayout.addWidget(self.inputC3, 1, 2)
+                self.inputLayout.addWidget(self.submit, 1, 3)
                 self.input.setLayout(self.inputLayout)
-                self.layout.addWidget(self.input)
+                self.layout.addWidget(self.input, 3, 0, 1, 2)
         else:
             try:
                 self.layout.removeWidget(self.input)
                 self.input.deleteLater()
+            except:
+                pass
+            try:
                 self.layout.removeWidget(self.submit)
                 self.submit.deleteLater()
-                QTimer.singleShot(0, self.shrink)
             except:
                 pass
             finally:
+                QTimer.singleShot(0, self.shrink)
                 self.input = QWidget()
                 self.inputLayout = QHBoxLayout()
                 self.inputLayout.addWidget(QLabel("Enter the height of the prism:"))
                 self.inputH = QLineEdit()
+                self.inputH.setFixedWidth(50)
                 self.submit = QPushButton("Submit")
                 self.submit.clicked.connect(self.sendPrism)
                 self.inputLayout.addWidget(self.inputH)
                 self.inputLayout.addWidget(self.submit)
                 self.input.setLayout(self.inputLayout)
-                self.layout.addWidget(self.input)
+                self.layout.addWidget(self.input, 3, 0, 1, 2)
 
     def shrink(self):
         self.layout.activate()
         self.adjustSize()
 
     def sendPyramid(self):
+        self.destroy = False
         c1 = num(self.inputC1.text())
         c2 = num(self.inputC2.text())
         c3 = num(self.inputC3.text())
+        name = self.name.text()
         if c1 == None or c2 == None or c3 == None:
             self.error = ErrorWindow(1, self)
             self.params.emit([self.error])
+        elif not name or not name.isalnum():
+            self.error = ErrorWindow(4, self)
+            self.params.emit([self.error])
         else:
-            self.params.emit(["Pyramid", c1, c2, c3])
+            self.params.emit(["Pyramid!", name, c1, c2, c3])
+            self.destroy = True
             self.close()
     
     def sendPrism(self):
+        self.destroy = False
         h = num(self.inputH.text())
+        name = self.name.text()
         if not h:
             self.error = ErrorWindow(1, self)
             self.params.emit([self.error])
+        elif not name or not name.isalnum():
+            self.error = ErrorWindow(4, self)
+            self.params.emit([self.error])
         else:
-            self.params.emit(["Prism", self.norm, h])
+            self.params.emit(["Prism!", name, h])
+            self.destroy = True
             self.close()
     
     def closeEvent(self, event):
-        self.params.emit(["Close"])
+        if self.destroy:
+            self.params.emit(["Close!"])
         event.accept()
 
 class ViewStackWindow(QWidget):

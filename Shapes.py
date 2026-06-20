@@ -16,7 +16,7 @@ def tlsplane(lst):
             edges = []
             for i in range(len(lst)):
                 edges.append([i, (i + 1) % len(lst)])
-            return [Polygon(temp, edges)]
+            return [Polygon("Polygon", temp, edges, [0, 0, 1])]
     except:
         return "Error: Invalid data or not enough data points"
     mat = []
@@ -45,13 +45,14 @@ def tlsplane(lst):
         edges = []
         for i in range(len(lst)):
             edges.append([i, (i + 1) % len(lst)])
-        return [Polygon(vecs, edges), *svd[2][2].A1, np.dot(svd[2][2], avg.A1).A1[0]]
+        return [Polygon("Polygon", vecs, edges, svd[2][2].A1.tolist()), np.dot(svd[2][2], avg.A1).A1[0]]
 
 class Polygon:
-    def __init__(self, vertices, edges):
-        self.name = "Polygon"
+    def __init__(self, name, vertices, edges, normal):
+        self.name = name
         self.vertices = vertices.tolist() if isinstance(vertices, np.matrix) or isinstance(vertices, np.ndarray) else vertices
         self.edges = edges.tolist() if isinstance(edges, np.matrix) or isinstance(edges, np.ndarray) else edges
+        self.normal = normal
     
     def draw(self):
         glBegin(GL_POLYGON)
@@ -60,8 +61,8 @@ class Polygon:
             glVertex3fv(self.vertices[i])
         glEnd()
     
-    def makePyramid(self, a, b, c):
-        solid = Solid("Custom Pyramid", self.vertices, self.edges, [], [1, 0, 0, 0])
+    def makePyramid(self, name, a, b, c):
+        solid = Solid(name, self.vertices, self.edges, [], [1, 0, 0, 0])
         L = len(self.vertices)
         for i in range(L):
             solid.edges.append([i, L])
@@ -79,13 +80,13 @@ class Polygon:
         solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
         return solid
     
-    def makePrism(self, norm, h):
-        solid = Solid("Custom Prism", self.vertices, self.edges, [], [1, 0, 0, 0])
+    def makePrism(self, name, h):
+        solid = Solid(name, self.vertices, self.edges, [], [1, 0, 0, 0])
         L = len(self.vertices)
         for i in range(L):
             solid.edges.append([L + i, (i + 1) % L + L])
             solid.edges.append([i, L + i])
-            solid.vertices.append((np.matrix(self.vertices[i]) + np.matrix(norm) * h).tolist()[0])
+            solid.vertices.append((np.matrix(self.vertices[i]) + np.matrix(self.normal) * h).tolist()[0])
         for i in range(L):
             solid.surfaces.append([i, (i + 1) % L, (i + 1) % L + L, L + i])
         solid.surfaces.append(list(range(L)))

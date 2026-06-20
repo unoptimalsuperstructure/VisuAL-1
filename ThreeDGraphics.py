@@ -1,4 +1,4 @@
-import math, Shapes, ThreeDWindows
+import math, Shapes, ThreeDWindows, json
 from PyQt6.QtWidgets import *
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtCore import Qt, QPoint, QTimer, QEvent
@@ -10,33 +10,37 @@ from bson import json_util
 from pymongo import MongoClient
 
 class ThreeDViewer(QOpenGLWidget):
-    def __init__(self, initSolids):
+    def __init__(self, initSolids, initLinesPlanes, namespace):
         super().__init__()
 
         client = MongoClient("mongodb://localhost:27017/")
         db = client["geometry"]
+        self.polygons = db["polygons"]
         self.solids = db["solids"]
-        self.solids.drop()
 
-        for json_file in Path("./Shapes/Solids").glob("*.json"):
+        self.objects = initSolids
+        self.namespace = namespace
+
+        for json_file in Path("./Sample Shapes/Solids").glob("*.json"):
             try:
                 with open(json_file, "r") as file:
-                    self.solids.insert_one(json_util.loads(file.read()))
+                    res = self.solids.find_one({"name": json_file.name[:-4]})
+                    if not res:
+                        self.solids.insert_one(json_util.loads(file.read()))
             except Exception as e:
                 print(f"Error processing {json_file.name}: {e}")
         
-        self.templates = []
-        cursor = self.solids.find("")
-        self.allSolids = []
-        for solid in cursor:
-            self.allSolids.append(solid)
-        for solid in initSolids:
-            self.templates.append(self.solids.find_one({"name": solid}))
-        self.objects = []
-        for solid in self.templates:
-            self.objects.append(Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], [1, 0, 0, 0]))
+        if initSolids == []:
+            try:
+                with open("./Sample Shapes/Solids/Cube.json", "r") as file:
+                    cube = json.load(file)
+                    self.objects.append(Shapes.Solid("Cube-1", cube['vertices'], cube['edges'], cube['surfaces'], [1, 0, 0, 0]))
+                    self.namespace.append("Cube")
+            except:
+                pass
+
         self.lastObjStack = self.objects.copy()
-        self.linesPlanes = []
+        self.linesPlanes = initLinesPlanes
         self.tempPolygon = None
 
         self.timer = QTimer()
@@ -189,6 +193,9 @@ class ThreeDSidePanel(QVBoxLayout):
         self.objectPanel = ThreeDObjectPanel(self)
         self.activeObj = None
         self.activeLinePlane = None
+
+        for linePlane in self.viewer.linesPlanes:
+            self.linePlanePanel.addButton(linePlane)
     
     def addLineWindow(self):
         self.window = ThreeDWindows.AddLineWindow()
@@ -525,39 +532,78 @@ class ThreeDSidePanel(QVBoxLayout):
         self.viewer.update()
     
     def addShapeWindow(self):
-        self.window = ThreeDWindows.AddShapeWindow(self.viewer.allSolids)
+        self.window = ThreeDWindows.AddShapeWindow(self.viewer.solids.find())
         self.window.show()
         self.window.params.connect(self.addShape)
     
     def addShape(self, params):
         if isinstance(params[0], ThreeDWindows.ErrorWindow):
             params[0].show()
-        elif params[0] == "Custom!":
-            self.window = ThreeDWindows.CustomPolygonWindow()
+        
+        elif params[0] == "DeleteSolid!":
+            self.viewer.solids.delete_one({"name": params[1]})
+            self.window = ThreeDWindows.AddShapeWindow(self.viewer.solids.find())
             self.window.show()
             self.window.params.connect(self.addShape)
-        elif isinstance(params[0][0], Shapes.Polygon):
-            self.viewer.tempPolygon = params[0][0]
-            self.viewer.update()
-            self.window = ThreeDWindows.CustomSolidWindow(params[0][1])
-            self.window.show()
-            self.window.params.connect(self.addShape)
-        elif params[0] == "Pyramid":
-            obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:])
-            self.viewer.objects.append(obj)
-            self.viewer.lastObjStack.append(obj)
-            self.objectPanel.addButton(obj)
-        elif params[0] == "Prism":
-            obj = Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:])
-            self.viewer.objects.append(obj)
-            self.viewer.lastObjStack.append(obj)
-            self.objectPanel.addButton(obj)
-        elif params[0] == "Close":
+
+        elif params[0] == "DeletePolygon!":
+            self.viewer.polygons.delete_one({"name": params[1]})
             self.viewer.tempPolygon = None
+            self.viewer.update()
+            self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+            self.window.show()
+            self.window.params.connect(self.addShape)
+        
+        elif params[0] == "Close!" or params[0] == None:
+            self.viewer.tempPolygon = None
+            self.viewer.update()
+        
+        elif params[0] == "Custom!":
+            self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+            self.window.show()
+            self.window.params.connect(self.addShape)
+        
+        elif params[0] == "Pyramid!" or params[0] == "Prism!":
+            obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:]) if params[0] == "Pyramid!" else Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:])
+            res = self.viewer.solids.find_one({"name": obj.name})
+            if res != None:
+                self.errorWindow = ThreeDWindows.ErrorWindow(5, self.window)
+                self.errorWindow.show()
+            else:
+                self.viewer.solids.insert_one({"name": obj.name, "vertices": obj.vertices, "edges": obj.edges, "surfaces": obj.surfaces})
+                self.viewer.namespace.append(obj.name)
+                no_duplicates = self.viewer.namespace.count(obj.name)
+                obj.name += f"-{no_duplicates}"
+                self.viewer.objects.append(obj)
+                self.viewer.lastObjStack.append(obj)
+                self.objectPanel.addButton(obj)
+        
+        elif isinstance(params[0][0], Shapes.Polygon):
+            polygon = params[0][0]
+            self.viewer.tempPolygon = polygon
+            self.viewer.update()
+            res = self.viewer.polygons.find_one({"name": polygon.name})
+            if params[0][1] == None and params[0][2] == True:
+                self.window = ThreeDWindows.CustomSolidWindow(params[0][0])
+                self.window.show()
+                self.window.params.connect(self.addShape)
+            elif params[0][2] == -1 and res != None:
+                self.errorWindow = ThreeDWindows.ErrorWindow(5, self.window)
+                self.errorWindow.show()
+            else:
+                if params[0][2] == -1:
+                    self.viewer.polygons.insert_one({"name": polygon.name, "vertices": polygon.vertices, "edges": polygon.edges, "normal": polygon.normal})
+                    self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+                    self.window.show()
+                    self.window.params.connect(self.addShape)
+        
         else:
             shape, nums = params[0], params[1:]
             solid = self.viewer.solids.find_one({"name": shape})
             obj = Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], nums)
+            self.viewer.namespace.append(obj.name)
+            no_duplicates = self.viewer.namespace.count(obj.name)
+            obj.name += f"-{no_duplicates}"
             self.viewer.objects.append(obj)
             self.viewer.lastObjStack.append(obj)
             self.objectPanel.addButton(obj)
