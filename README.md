@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.3a**
+**Current version: v0.1.3b**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -14,7 +14,7 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyQt6
 
 ## What to expect for the next update
-Next version: v0.1.3b - Loading and saving shapes as JSON files via a localhost MongoDB database
+Next version: v0.1.4a - Improvements to 2D Image Processing
 
 # 2D Image Processing
 
@@ -30,6 +30,10 @@ Desktop App Controls (Moving Images):
 # 3D Visualiser
 
 Features: Have fun applying transformations to cubes and regular tetrahedra. The last position of an object before a transformation is shown as a translucent object, and the lines of vertex-wise translation and the line or plane of reflection (where applicable) is shown. The matrix stack for the active object can also be displayed. Any number of previous operations can also be repeated.
+
+You can now also define your very own 3D solids! To do so, you first pass in a CSV to specify a polygon, then use that polygon as a base for a pyramid or prism!
+
+Furthermore, save your work and load it up again later. Note that you will lose access to the undo stack, but all objects will remain in the position you last left them.
 
 Desktop App Controls (Game Camera):
 - WASD to move along the xy-plane.
@@ -55,6 +59,10 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.3a -> v0.1.3b
+- Fully working MongoDB integration. You can now create your own polygons and solids and these will be saved in a localhost MongoDB. This way, you will be able to draw your very own solids onto the canvas anytime.
+- Loading and saving!!! Save your canvas into a JSON file, and load it up again anytime later! Note: These files are the same exact type of file as the sample 3D solid files; Cube and Tetrahedron. **Do not overwrite the sample files or the program may brick!**
+
 v0.1.2b -> v0.1.3a
 - Pass in a CSV representing either (x, y) coordinates or (x, y, z) coordinates, find the best fit polygon in the latter case, and use it as a base for pyramids and prisms. (This single feature took me several hours lol)
 
