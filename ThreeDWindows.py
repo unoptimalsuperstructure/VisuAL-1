@@ -1364,7 +1364,7 @@ class CustomPolygonWindow(QWidget):
                 self.polygon[2] = True
         if em:
             self.params.emit([self.polygon])
-        self.destroy = True
+        self.destroy = False
         self.close()
     
     def delete(self):
