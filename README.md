@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.3b**
+**Current version: v0.1.3c**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -59,6 +59,9 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.3b -> v0.1.3c
+- Bug fixes
+
 v0.1.3a -> v0.1.3b
 - Fully working MongoDB integration. You can now create your own polygons and solids and these will be saved in a localhost MongoDB. This way, you will be able to draw your very own solids onto the canvas anytime.
 - Loading and saving!!! Save your canvas into a JSON file, and load it up again anytime later! Note: These files are the same exact type of file as the sample 3D solid files; Cube and Tetrahedron. **Do not overwrite the sample files or the program may brick!**
