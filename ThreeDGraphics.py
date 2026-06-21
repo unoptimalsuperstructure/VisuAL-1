@@ -15,8 +15,11 @@ class ThreeDViewer(QOpenGLWidget):
 
         client = MongoClient("mongodb://localhost:27017/")
         db = client["geometry"]
-        self.polygons = db["polygons"]
-        self.solids = db["solids"]
+        #self.polygons = db["polygons"]
+        #self.solids = db["solids"]
+
+        self.polygons.drop()
+        self.solids.drop()
 
         self.objects = initSolids
         self.namespace = namespace
@@ -24,7 +27,7 @@ class ThreeDViewer(QOpenGLWidget):
         for json_file in Path("./Sample Shapes/Solids").glob("*.json"):
             try:
                 with open(json_file, "r") as file:
-                    res = self.solids.find_one({"name": json_file.name[:-4]})
+                    res = self.solids.find_one({"name": json_file.name[:-5]})
                     if not res:
                         self.solids.insert_one(json_util.loads(file.read()))
             except Exception as e:
@@ -564,12 +567,12 @@ class ThreeDSidePanel(QVBoxLayout):
             self.window.params.connect(self.addShape)
         
         elif params[0] == "Pyramid!" or params[0] == "Prism!":
-            obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:]) if params[0] == "Pyramid!" else Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:])
-            res = self.viewer.solids.find_one({"name": obj.name})
+            res = self.viewer.solids.find_one({"name": params[1]})
             if res != None:
                 self.errorWindow = ThreeDWindows.ErrorWindow(5, self.window)
                 self.errorWindow.show()
             else:
+                obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:]) if params[0] == "Pyramid!" else Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:]) 
                 self.viewer.solids.insert_one({"name": obj.name, "vertices": obj.vertices, "edges": obj.edges, "surfaces": obj.surfaces})
                 self.viewer.namespace.append(obj.name)
                 no_duplicates = self.viewer.namespace.count(obj.name)
@@ -577,6 +580,8 @@ class ThreeDSidePanel(QVBoxLayout):
                 self.viewer.objects.append(obj)
                 self.viewer.lastObjStack.append(obj)
                 self.objectPanel.addButton(obj)
+                self.viewer.tempPolygon = None
+                self.viewer.update()
         
         elif isinstance(params[0][0], Shapes.Polygon):
             polygon = params[0][0]

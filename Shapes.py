@@ -29,9 +29,9 @@ def tlsplane(lst):
     mat = np.matrix(mat).transpose()*np.matrix(mat)
     svd = np.linalg.svd(mat)
     if abs(svd[1][0]) < 0.001 or abs(svd[1][1]) < 0.001:
-        return "Error: At least one of the two largest eigenvalues is almost zero. Your points cannot be well-fitted to a plane."
+        return "Error: At least one of the two largest eigenvalues is almost zero.\nYour points cannot be well-fitted to a plane."
     elif svd[1][2] != 0 and 1/1.001 < svd[1][1]/svd[1][2] < 1.001:
-        return "Error: The two smallest eigenvalues are too close. Your points cannot be well-fitted to a plane."
+        return "Error: The two smallest eigenvalues are too close.\nYour points cannot be well-fitted to a plane."
     else:
         a, b, c, d = *svd[2][2].A1, np.dot(svd[2][2], avg.A1).A1[0]
         proj = np.array([[1 - a ** 2, -a * b, -a * c, a * d],
