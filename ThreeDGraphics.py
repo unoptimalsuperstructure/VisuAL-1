@@ -15,11 +15,11 @@ class ThreeDViewer(QOpenGLWidget):
 
         client = MongoClient("mongodb://localhost:27017/")
         db = client["geometry"]
-        #self.polygons = db["polygons"]
-        #self.solids = db["solids"]
+        self.polygons = db["polygons"]
+        self.solids = db["solids"]
 
-        self.polygons.drop()
-        self.solids.drop()
+        #self.polygons.drop()
+        #self.solids.drop()
 
         self.objects = initSolids
         self.namespace = namespace
