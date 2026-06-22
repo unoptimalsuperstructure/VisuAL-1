@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image Processing</title>
+  <link rel="stylesheet" href="../BaseStyle.css"/>
+  <link rel="stylesheet" href="image.css"/>
+</head>
+<body>
+
+<!-- ─Topbar ────────────────────────────────────────────── -->
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">Milestone 1</div>
+  <div class="spacer"></div>
+  <a class="topbar-back" href="../Home.html">← Home</a>
+</div>
+
+<!-- ─Main layout ──────────────────────────────────────────────-->
+<div id="main">
+
+  <!-- ─Sidebar──────────────────────────────────────────────-->
+  <div id="sidebar">
+
+    <!-- Layers -->
+    <div class="section">
+      <div class="section-head">Layers <span class="chevron">▾</span></div>
+      <div class="section-body">
+        <div id="layer-list"></div>
+        <p id="no-layers-msg" style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">
+          No images loaded yet.
+        </p>
+        <label class="btn" id="btn-add-image" for="file-input" style="margin-top:6px">
+          <span class="btn-icon">＋</span> Add Image…
+        </label>
+        <input type="file" id="file-input" accept="image/*" multiple hidden/>
+      </div>
+    </div>
+
+    <!-- ─Filters ────────────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-head">Filters <span class="chevron">▾</span></div>
+      <div class="section-body">
+        <button class="btn" id="btn-colour">
+          <span class="btn-icon"></span> Colour Filter
+        </button>
+        <button class="btn" id="btn-blur">
+          <span class="btn-icon"></span> Blur
+        </button>
+        <button class="btn" id="btn-sobel">
+          <span class="btn-icon">⊞</span> Edge Detection
+        </button>
+        <button class="btn" id="btn-undo" style="margin-top:6px">
+          <span class="btn-icon">↩</span> Undo
+        </button>
+      </div>
+    </div>
+
+    <!-- Steps (active layer pipeline) -->
+    <div class="section">
+      <div class="section-head">Steps <span class="chevron">▾</span></div>
+      <div class="section-body">
+        <div id="step-list"></div>
+        <p id="no-steps-msg" style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">
+          Select a layer to see its steps.
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions ────────────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-head">Actions <span class="chevron">▾</span></div>
+      <div class="section-body">
+        <button class="btn" id="btn-save">
+          <span class="btn-icon">↓</span> Save Layer
+        </button>
+        <button class="btn danger" id="btn-delete">
+          <span class="btn-icon">✕</span> Delete Layer
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls hint ────────────────────────────────────────────── -->
+    <div class="hint-block">
+      Click an image in the list to view it<br>
+      Click the canvas to select an image<br>
+      Click a step to view that state<br>
+      <strong>Drag</strong> a step to reorder · <strong>×</strong> to remove
+    </div>
+
+    <!-- Inline warning (fades out) -->
+    <div id="sidebar-warning"></div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ─Viewport──────────────────────────────────────────────-->
+  <div id="viewport">
+    <canvas id="canvas"></canvas>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ─Colour filter modal ────────────────────────────────────────────── -->
+<div class="modal-bg" id="colour-modal-bg" style="display:none">
+  <div class="modal colour-modal">
+    <h3>Colour Filter</h3>
+    <p class="desc">Apply a colour adjustment or sepia tone to the selected layer.</p>
+
+    <!-- Type selector -->
+    <div class="type-row">
+      <label class="type-opt">
+        <input type="radio" name="colour-type" value="colour" checked/>
+        <span>Colour Adjustment</span>
+      </label>
+      <label class="type-opt">
+        <input type="radio" name="colour-type" value="sepia"/>
+        <span>Sepia</span>
+      </label>
+    </div>
+
+    <!-- Colour Adjustment fields -->
+    <div id="colour-adjust-fields">
+      <div class="section-label">Relative scale (0 – 200%)</div>
+
+      <div class="slider-row">
+        <span class="ch-label">R</span>
+        <input type="range" id="colour-relR" min="0" max="200" value="100"/>
+        <span class="slider-val" id="colour-relR-label">100%</span>
+      </div>
+      <div class="slider-row">
+        <span class="ch-label">G</span>
+        <input type="range" id="colour-relG" min="0" max="200" value="100"/>
+        <span class="slider-val" id="colour-relG-label">100%</span>
+      </div>
+      <div class="slider-row">
+        <span class="ch-label">B</span>
+        <input type="range" id="colour-relB" min="0" max="200" value="100"/>
+        <span class="slider-val" id="colour-relB-label">100%</span>
+      </div>
+
+      <div class="section-label" style="margin-top:10px">Absolute offset (−255 – +255)</div>
+
+      <div class="slider-row">
+        <span class="ch-label">R</span>
+        <input type="range" id="colour-absR" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="colour-absR-label">0</span>
+      </div>
+      <div class="slider-row">
+        <span class="ch-label">G</span>
+        <input type="range" id="colour-absG" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="colour-absG-label">0</span>
+      </div>
+      <div class="slider-row">
+        <span class="ch-label">B</span>
+        <input type="range" id="colour-absB" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="colour-absB-label">0</span>
+      </div>
+    </div>
+
+    <!-- Sepia (no parameters) -->
+    <div id="sepia-fields" style="display:none">
+      <p class="desc" style="margin:0">
+        Converts the image to a warm brownish tone by mixing RGB channels
+        with the standard sepia transform matrix.
+      </p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="colour-cancel">Cancel</button>
+      <button class="btn primary" id="colour-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─Blur Modal──────────────────────────────────────────────-->
+<div class="modal-bg" id="blur-modal-bg" style="display:none">
+  <div class="modal">
+    <h3>Apply Blur</h3>
+    <p class="desc">Choose a blur algorithm and set its parameters.</p>
+
+    <!-- Type selector -->
+    <div class="type-row">
+      <label class="type-opt">
+        <input type="radio" name="blur-type" value="median" checked/>
+        <span>Median</span>
+      </label>
+      <label class="type-opt">
+        <input type="radio" name="blur-type" value="gaussian"/>
+        <span>Gaussian</span>
+      </label>
+    </div>
+
+    <!-- Median: radius -->
+    <div class="field-row" id="median-radius-row">
+      <label>r</label>
+      <input type="number" id="blur-radius" min="1" max="5" value="1"
+             style="width:56px;flex:none"/>
+      <span style="font-size:11px;color:var(--muted)">kernel radius (1 – 5)</span>
+    </div>
+
+    <!-- Gaussian: standard deviation -->
+    <div class="field-row" id="gaussian-sd-row" style="display:none">
+      <label>σ</label>
+      <input type="number" id="blur-sd" min="0.1" step="0.1" value="1.0"
+             placeholder="e.g. 1.5"/>
+      <span style="font-size:11px;color:var(--muted)">std. deviation (px)</span>
+    </div>
+
+    <p class="blur-note">
+      Median blur on large images may take several seconds for r ≥ 3.
+    </p>
+
+    <div class="error-msg" id="blur-error"></div>
+
+    <div class="modal-actions">
+      <button class="btn" id="blur-cancel">Cancel</button>
+      <button class="btn primary" id="blur-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="image.js"></script>
+<script src="scene.js"></script>
+<script src="ui.js"></script>
+<script src="render.js"></script>
+</body>
+</html>
