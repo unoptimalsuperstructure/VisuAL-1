@@ -1512,7 +1512,7 @@ class ViewStackWindow(QWidget):
         tempStack.reverse()
         topString = ""
         for matrix in tempStack:
-            matrixStack.append(toString(matrix[0]))
+            matrixStack.append(toString(matrix[0], 3))
             topString += matrix[1] + " " * (30 + 4 * math.floor(math.log(abs(matrix[0]).max(), 10)) - len(matrix[1]))
         label = QLabel(topString + "\n" + (concat(matrixStack)))
         label.setFont(QFont("Courier New"))

@@ -7,8 +7,12 @@ from OpenGL.GLU import *
 from Images import *
 
 class TwoDViewer(QWidget):
-    def __init__(self, initImages):
+    def __init__(self, initImages, res):
         super().__init__()
+
+        self.res = res
+
+        self.setStyleSheet("border: 2px solid black;")
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.perform_action)
@@ -29,11 +33,11 @@ class TwoDViewer(QWidget):
         self.topImg = QLabel()
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            canvas = QPixmap("static/canvas.png").scaled(800, 600)
+            canvas = QPixmap("static/canvas.png").scaled(self.size())
             painter = QPainter(canvas)
             for image in self.images:
                 if image.show:
-                    painter.drawPixmap(image.x, image.y, image.getImage().scaled(800, 600, Qt.AspectRatioMode.KeepAspectRatio))
+                    painter.drawPixmap(image.x, image.y, image.getImage())
             painter.end()
             self.topImg.setPixmap(canvas)
         self.layout.addWidget(self.topImg)
@@ -53,6 +57,14 @@ class TwoDViewer(QWidget):
                 layer.img.x += delta.x()
                 layer.img.y += delta.y()
 
+            self.update()
+        
+        if event.buttons() == Qt.MouseButton.RightButton:
+            cur_pos = event.position().toPoint()
+            delta = cur_pos - self.last_mouse_pos
+            self.last_mouse_pos = cur_pos
+            for layer in self.activeLayers:
+                layer.img.size += 0.001 * delta.y()
             self.update()
     
     def mouseReleaseEvent(self, event):
@@ -122,11 +134,12 @@ class TwoDViewer(QWidget):
     def update(self):
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            canvas = QPixmap("static/canvas.png").scaled(800, 600)
+            canvas = QPixmap("static/canvas.png").scaled(self.size())
             painter = QPainter(canvas)
             for image in self.images:
                 if image.show:
-                    painter.drawPixmap(image.x, image.y, image.getImage().scaled(800, 600, Qt.AspectRatioMode.KeepAspectRatio))
+                    pixmap = image.getImage()
+                    painter.drawPixmap(image.x, image.y, pixmap.scaled(int(image.ow * image.size), int(image.oh * image.size), Qt.AspectRatioMode.KeepAspectRatio))
             painter.end()
             self.topImg.setPixmap(canvas)
         self.layout.addWidget(self.topImg)
@@ -180,7 +193,7 @@ class TwoDSidePanel(QVBoxLayout):
             "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
         )[0]
         if file_path:
-            img = Image(file_path)
+            img = Image(file_path, self.viewer.res)
             ext_index = len(img.path) - img.path[::-1].find(".") - 1
             no_duplicates = self.namespace.count(img.name)
             self.namespace.append(img.name)
@@ -223,6 +236,12 @@ class TwoDSidePanel(QVBoxLayout):
         if self.activeLayers:
             for layer in self.activeLayers:
                 layer.img.showhide()
+            self.viewer.update()
+    
+    def rerender(self):
+        if self.activeLayers:
+            for layer in self.activeLayers:
+                layer.img.rerender()
             self.viewer.update()
     
     def colourWindow(self):
@@ -312,8 +331,11 @@ class TwoDTransformationPanel(QVBoxLayout):
         convolutionButton = QPushButton("Apply Convolution")
         convolutionButton.clicked.connect(self.sidePanel.convolutionWindow)
 
-        showhideButton = QPushButton("Show/Hide currently selected images")
+        showhideButton = QPushButton("Show/Hide selected images")
         showhideButton.clicked.connect(self.sidePanel.showhide)
+
+        rerenderButton = QPushButton("Re-Render Image")
+        rerenderButton.clicked.connect(self.sidePanel.rerender)
 
         undoButton = QPushButton("Undo")
         undoButton.clicked.connect(self.sidePanel.undo)
@@ -327,6 +349,7 @@ class TwoDTransformationPanel(QVBoxLayout):
         self.addWidget(colourButton)
         self.addWidget(convolutionButton)
         self.addWidget(showhideButton)
+        self.addWidget(rerenderButton)
         self.addWidget(undoButton)
         self.addWidget(deleteButton)
         self.addWidget(saveButton)

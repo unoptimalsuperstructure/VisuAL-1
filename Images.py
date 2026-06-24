@@ -4,11 +4,17 @@ from OpenGL.GLU import *
 from PyQt6.QtGui import QPixmap
 import cv2, qimage2ndarray
 
+dic = {1: (560, 420), 2: (720, 540), 3: (960, 540), 4: (1600, 900)}
+
 class Image:
-    def __init__(self, path):
+    def __init__(self, path, res):
         self.original = cv2.imread(path, -1)
         h, w = self.original.shape[:2]
-        self.image = cv2.resize(self.original, (int(min(800, 600 * w/h)), int(min(600, 800 * h/w))))
+        if w > dic[res][0] or h > dic[res][1]:
+            self.ow, self.oh = int(min(dic[res][0], dic[res][1] * w/h)), int(min(dic[res][1], dic[res][0] * h/w))
+        else:
+            self.ow, self.oh = w, h
+        self.image = cv2.resize(self.original, (self.ow, self.oh))
         self.path = path
         self.name = path.split("/")[-1]
         self.out = ""
@@ -24,10 +30,11 @@ class Image:
         self.show = True
         self.x = 0
         self.y = 0
+        self.size = 1
         self.posStack = [[0, 0]]
     
     def getImage(self):
-        return QPixmap.fromImage(qimage2ndarray.array2qimage(cv2.cvtColor(self.stack[-1][0], self.const)))
+        return QPixmap.fromImage(qimage2ndarray.array2qimage(cv2.cvtColor(np.float32(self.stack[-1][0]), self.const)))
     
     def write(self, path):
         temp = self.original.copy()
@@ -47,6 +54,21 @@ class Image:
     
     def showhide(self):
         self.show = not self.show
+    
+    def rerender(self):
+        h, w = self.original.shape[:2]
+        self.image = cv2.resize(self.original, (int(self.size * self.ow), int(self.size * self.oh)))
+        self.oh *= self.size
+        self.ow *= self.size
+        self.size = 1
+        i = 0
+        for op in self.stack:
+            try:
+                self.image = op[2].applyToRawImage(self.image)
+            except:
+                self.image = op[2].get(self.image)
+            self.stack[i][0] = self.image
+            i += 1
 
 class Filter:
     def __init__(self, matrix):
