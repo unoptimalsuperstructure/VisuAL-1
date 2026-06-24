@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.3c**
+**Current version: v0.1.4a**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -12,9 +12,10 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyMongo
 - PyOpenGL
 - PyQt6
+- SciPy
 
 ## What to expect for the next update
-Next version: v0.1.4a - Improvements to 2D Image Processing
+Next version: v0.1.4b - Further Improvements to 2D Image Processing
 
 # 2D Image Processing
 
@@ -22,6 +23,7 @@ Features: Import images as you please and move them around the canvas. Perform a
 
 Desktop App Controls (Moving Images):
 - WASD or Left Click and Drag to move the selected images around the canvas.
+- Right Click and Drag up or down to resize the image preview. There is also an option to re-render the image at the upscaled resolution.
 - Z to move the image to the last position. (This is independent of undoing filters or convolutions.)
 - H to flip the image horizontally, V to flip the image vertically.
 
@@ -59,6 +61,10 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.3c -> v0.1.4a
+- No actual new features to image processing yet, just UI tweaks and image preview resizing ability
+- Placeholder for numerical stability - implemented classical Gaussian Elimination and Gram-Schmidt. To be updated with more features later.
+
 v0.1.3b -> v0.1.3c
 - Bug fixes
 
