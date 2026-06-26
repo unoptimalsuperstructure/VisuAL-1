@@ -109,7 +109,7 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4a - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4b - Home")
         f1 = open("sizeconfig.txt")
         self.size = int(f1.readline())
         f1.close()
@@ -177,7 +177,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4a - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4b - 2D Image Processing")
         f1 = open("sizeconfig.txt")
         self.size = f1.readline()
         try:
@@ -238,7 +238,7 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4a - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4b - 3D Visualiser")
         f1 = open("sizeconfig.txt")
         self.size = int(f1.readline())
         f1.close()
@@ -384,7 +384,7 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4a - Numerical Stability")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4b - Numerical Stability")
         self.resize(1280, 720)
 
         central = QWidget()

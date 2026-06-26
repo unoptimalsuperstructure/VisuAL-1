@@ -3,6 +3,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from PyQt6.QtGui import QPixmap
 import cv2, qimage2ndarray
+import gc
 
 dic = {1: (560, 420), 2: (720, 540), 3: (960, 540), 4: (1600, 900)}
 
@@ -25,8 +26,11 @@ class Image:
         self.stack = [[self.image, self.channels, Filter(np.array([[1, 0, 0, 0, 0],
                                                                    [0, 1, 0, 0, 0],
                                                                    [0, 0, 1, 0, 0],
-                                                                   [0, 0, 0, 1, 0]]))]]
-        self.matrixStack = []
+                                                                   [0, 0, 0, 1, 0]]), "Identity")]]
+        self.matrixStack = [[np.array([[1, 0, 0, 0, 0],
+                                      [0, 1, 0, 0, 0],
+                                      [0, 0, 1, 0, 0],
+                                      [0, 0, 0, 1, 0]]), "Identity"]]
         self.show = True
         self.x = 0
         self.y = 0
@@ -34,7 +38,7 @@ class Image:
         self.posStack = [[0, 0]]
     
     def getImage(self):
-        return QPixmap.fromImage(qimage2ndarray.array2qimage(cv2.cvtColor(np.float32(self.stack[-1][0]), self.const)))
+        return QPixmap.fromImage(qimage2ndarray.array2qimage(cv2.cvtColor(np.uint8(self.stack[-1][0]), self.const)))
     
     def write(self, path):
         temp = self.original.copy()
@@ -43,6 +47,13 @@ class Image:
                 temp = op[2].applyToRawImage(temp)
             elif isinstance(op[2], IndividualConvolution): # Non-standard convolution such as Sobel or unmasked sharpening
                 temp = op[2].get(temp)
+            elif isinstance(op[2], list) and op[2][0] == "Crop":
+                h, w = self.original.shape[:2]
+                params = []
+                for j in range(4):
+                    params.append(int(op[2][1][j] * (w if j < 2 else h)))
+                print(params)
+                temp = temp[params[0]:params[1],params[2]:params[3]]
         temp = temp.astype(np.uint8)
         cv2.imwrite(path, temp)
     
@@ -56,23 +67,47 @@ class Image:
         self.show = not self.show
     
     def rerender(self):
-        h, w = self.original.shape[:2]
         self.image = cv2.resize(self.original, (int(self.size * self.ow), int(self.size * self.oh)))
         self.oh *= self.size
         self.ow *= self.size
         self.size = 1
+        tempStack = self.stack.copy()
+        self.stack = [tempStack[0]]
+        self.stack[0][0] = self.image
         i = 0
-        for op in self.stack:
-            try:
-                self.image = op[2].applyToRawImage(self.image)
-            except:
-                self.image = op[2].get(self.image)
-            self.stack[i][0] = self.image
+        for op in tempStack:
+            if isinstance(op[2], list) and op[2][0] == "Crop":
+                params = []
+                for j in range(4):
+                    params.append(int(op[2][1][j] * (self.ow if j < 2 else self.oh)))
+                self.image = self.crop(params, False)
+            else:
+                try:
+                    self.image = op[2].applyToRawImage(self.image).astype(np.float32)
+                except:
+                    self.image = op[2].get(self.image).astype(np.float32)
+            self.stack.append([self.image, tempStack[i][1], tempStack[i][2]])
             i += 1
+        del tempStack
+        gc.collect()
+    
+    def crop(self, params, append):
+        img = self.stack[-1].copy()
+        if params[0] > params[1]:
+            params[0], params[1] = params[1], params[0]
+        if params[2] > params[3]:
+            params[2], params[3] = params[3], params[2]
+        img[2] = ["Crop", [params[0]/img[0].shape[1], params[1]/img[0].shape[1], params[2]/img[0].shape[0], params[3]/img[0].shape[0]]]
+        img[0] = img[0][params[0]:params[1],params[2]:params[3]]
+        if append:
+            self.stack.append(img)
+            self.matrixStack.append([None, "Crop"])
+        return img[0]
 
 class Filter:
-    def __init__(self, matrix):
+    def __init__(self, matrix, name):
         self.matrix = matrix
+        self.name = name
         self.result = []
     
     def apply(self, layers):
@@ -89,6 +124,7 @@ class Filter:
             image = np.dot(image, self.matrix.T)
             image = np.clip(image, 0, 255)
             layer.img.stack.append([image.reshape(h, w, 4).astype(np.uint8), channels, self])
+            layer.img.matrixStack.append([self.matrix, self.name])
             self.result.append(layer.img)
         return self.result
     
@@ -107,12 +143,41 @@ class Filter:
         image = image.reshape(h, w, 4)
         return image
 
+class GrayscaleFilter(Filter):
+    def __init__(self, v):
+        super().__init__(np.array([[0.2126, 0.7152, 0.0722, 0, 0],
+                                   [0.2126, 0.7152, 0.0722, 0, 0],
+                                   [0.2126, 0.7152, 0.0722, 0, 0],
+                                   [0, 0, 0, 1, 0]]) * v +
+                        
+                         np.array([[1, 0, 0, 0, 0],
+                                   [0, 1, 0, 0, 0],
+                                   [0, 0, 1, 0, 0],
+                                   [0, 0, 0, 1, 0]]) * (1 - v), f"Grayscale ({100 * v}%)")
+
 class SepiaFilter(Filter):
-    def __init__(self):
+    def __init__(self, v):
         super().__init__(np.array([[0.131, 0.534, 0.272, 0, 0],
                                    [0.168, 0.686, 0.349, 0, 0],
                                    [0.189, 0.769, 0.393, 0, 0],
-                                   [0, 0, 0, 1, 0]]))
+                                   [0, 0, 0, 1, 0]]) * v +
+                        
+                         np.array([[1, 0, 0, 0, 0],
+                                   [0, 1, 0, 0, 0],
+                                   [0, 0, 1, 0, 0],
+                                   [0, 0, 0, 1, 0]]) * (1 - v), f"Sepia ({100 * v}%)")
+
+class InversionFilter(Filter):
+    def __init__(self, v):
+        super().__init__(np.array([[-1, 0, 0, 0, 255],
+                                   [0, -1, 0, 0, 255],
+                                   [0, 0, -1, 0, 255],
+                                   [0, 0, 0, 1, 0]]) * v +
+                        
+                         np.array([[1, 0, 0, 0, 0],
+                                   [0, 1, 0, 0, 0],
+                                   [0, 0, 1, 0, 0],
+                                   [0, 0, 0, 1, 0]]) * (1 - v), f"Inversion ({100 * v}%)")
 
 # TODO
 """class TransparencyFilter(Filter):
@@ -124,18 +189,22 @@ class ColourFilter(Filter):
         super().__init__(np.array([[relB, 0, 0, 0, absB],
                                    [0, relG, 0, 0, absG],
                                    [0, 0, relR, 0, absR],
-                                   [0, 0, 0, relA, absA]]))
+                                   [0, 0, 0, relA, absA]]), "Colour Filter")
 
 class Convolution:
-    def __init__(self, type, params):
+    def __init__(self, type, params, name):
         self.type = type
         self.params = params
-        self.matrix = []
+        self.name = name
+        self.matrix = None
         self.result = []
     
     def apply(self, layers):
         for layer in layers:
+            layer.img.stack[-1][0] = layer.img.stack[-1][0].astype(np.uint8)
             layer.img.stack.append([self.type(layer.img.stack[-1][0], *self.params), layer.img.channels, self])
+            layer.img.stack[-1][0] = layer.img.stack[-1][0].astype(np.float32)
+            layer.img.matrixStack.append([self.matrix, self.name])
             self.result.append(layer.img)
         return self.result
     
@@ -144,6 +213,7 @@ class Convolution:
             sobel = Sobel()
             layer.img.stack.append([sobel.get(layer.img.stack[-1][0]), 4, sobel])
             self.result.append(layer.img)
+            layer.img.matrixStack.append([self.matrix, self.name])
         return self.result
     
     def applySharpen(self, layers, v):
@@ -151,6 +221,7 @@ class Convolution:
             sharpen = Sharpen(v)
             layer.img.stack.append([sharpen.get(layer.img.stack[-1][0]), 4, sharpen])
             self.result.append(layer.img)
+            layer.img.matrixStack.append([self.matrix, self.name])
         return self.result
     
     def applyToRawImage(self, image): # Only used for saving operations on raw images without the image wrapper
@@ -169,20 +240,26 @@ class Convolution:
                 del img
 
 class BlankConvolution(Convolution):
-    def __init__(self):
-        super().__init__(None, [])
+    def __init__(self, name):
+        super().__init__(None, [], name)
+        self.matrix = None
 
 class BoxBlur(Convolution):
     def __init__(self, r):
-        super().__init__(cv2.blur, [(2 * r + 1, 2 * r + 1)])
+        super().__init__(cv2.blur, [(2 * r + 1, 2 * r + 1)], f"Box Blur (radius {r})")
+        self.matrix = np.ones((2 * r + 1, 2 * r + 1))/(4 * (r ** 2) + 4 * r + 1)
 
 class MedianBlur(Convolution):
     def __init__(self, r):
-        super().__init__(cv2.medianBlur, [2 * r + 1])
+        super().__init__(cv2.medianBlur, [2 * r + 1], f"Median Blur (radius {r})")
 
 class GaussianBlur(Convolution):
     def __init__(self, r, sd):
-        super().__init__(cv2.GaussianBlur, [(2 * r + 1, 2 * r + 1), sd])
+        super().__init__(cv2.GaussianBlur, [(2 * r + 1, 2 * r + 1), sd], f"Gaussian Blur (radius {r}, SD {sd})")
+        x = np.arange(-r, r + 1)
+        g = g = np.exp(-(x**2) / (2 * sd**2))
+        g /= g.sum()
+        self.matrix = np.outer(g, g)
 
 class IndividualConvolution:
     def __init__(self, params):
@@ -194,7 +271,7 @@ class Sharpen(IndividualConvolution):
         
     def get(self, image):
         v = self.params[0]
-        blurred = cv2.GaussianBlur(image, (11, 11), 50)
+        blurred = cv2.GaussianBlur(image, (7, 7), 1)
         sharpened = cv2.addWeighted(image, v + 1, blurred, -v, 0)
         sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
         return sharpened

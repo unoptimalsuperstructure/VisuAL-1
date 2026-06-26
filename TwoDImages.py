@@ -33,13 +33,13 @@ class TwoDViewer(QWidget):
         self.topImg = QLabel()
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            canvas = QPixmap("static/canvas.png").scaled(self.size())
-            painter = QPainter(canvas)
+            self.canvas = QPixmap("static/canvas.png").scaled(self.size())
+            painter = QPainter(self.canvas)
             for image in self.images:
                 if image.show:
                     painter.drawPixmap(image.x, image.y, image.getImage())
             painter.end()
-            self.topImg.setPixmap(canvas)
+            self.topImg.setPixmap(self.canvas)
         self.layout.addWidget(self.topImg)
         self.setLayout(self.layout)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -65,6 +65,8 @@ class TwoDViewer(QWidget):
             self.last_mouse_pos = cur_pos
             for layer in self.activeLayers:
                 layer.img.size += 0.001 * delta.y()
+                if layer.img.size < 0.01:
+                    layer.img.size = 0.01
             self.update()
     
     def mouseReleaseEvent(self, event):
@@ -134,14 +136,14 @@ class TwoDViewer(QWidget):
     def update(self):
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            canvas = QPixmap("static/canvas.png").scaled(self.size())
-            painter = QPainter(canvas)
+            self.canvas = QPixmap("static/canvas.png").scaled(self.size())
+            painter = QPainter(self.canvas)
             for image in self.images:
                 if image.show:
                     pixmap = image.getImage()
                     painter.drawPixmap(image.x, image.y, pixmap.scaled(int(image.ow * image.size), int(image.oh * image.size), Qt.AspectRatioMode.KeepAspectRatio))
             painter.end()
-            self.topImg.setPixmap(canvas)
+            self.topImg.setPixmap(self.canvas)
         self.layout.addWidget(self.topImg)
         gc.collect()
         
@@ -163,7 +165,6 @@ class TwoDSidePanel(QVBoxLayout):
         self.viewer.activeLayers = self.activeLayers if self.activeLayers else []
     
     def undo(self):
-        self.viewer.update()
         if self.viewer.images and self.viewer.lastOpStack:
             toDelete = []
             for pop in self.viewer.lastOpStack.pop():
@@ -232,6 +233,16 @@ class TwoDSidePanel(QVBoxLayout):
                 if file_path:
                     layer.img.write(file_path)
     
+    def savePixmap(self):
+        file_path = QFileDialog.getSaveFileName(
+        None,
+        "Save...",
+        "NewPixmap",
+        "PNG (*.png);;JPEG (*.jpeg)"
+        )[0]
+        if file_path:
+            self.viewer.canvas.save(file_path)
+    
     def showhide(self):
         if self.activeLayers:
             for layer in self.activeLayers:
@@ -244,6 +255,17 @@ class TwoDSidePanel(QVBoxLayout):
                 layer.img.rerender()
             self.viewer.update()
     
+    def cropWindow(self):
+        self.window = TwoDWindows.CropWindow(self.activeLayers)
+        self.window.show()
+        self.window.params.connect(self.crop)
+    
+    def crop(self, params):
+        image = self.activeLayers[0].img
+        image.crop(params[1:], True)
+        self.viewer.lastOpStack.append([image.name])
+        self.viewer.update()
+
     def colourWindow(self):
         self.window = TwoDWindows.ColourWindow(self.activeLayers)
         self.window.show()
@@ -261,8 +283,22 @@ class TwoDSidePanel(QVBoxLayout):
                             self.viewer.images[i] = img
                             newOps.append(img.name)
                             break
-            if params[0] == "Sepia":
-                for img in SepiaFilter().apply(self.activeLayers):
+            elif params[0] == "Grayscale":
+                for img in GrayscaleFilter(params[1]).apply(self.activeLayers):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
+            elif params[0] == "Sepia":
+                for img in SepiaFilter(params[1]).apply(self.activeLayers):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
+            elif params[0] == "Inversion":
+                for img in InversionFilter(params[1]).apply(self.activeLayers):
                     for i in range(len(self.viewer.images)):
                         if self.viewer.images[i].name == img.name:
                             self.viewer.images[i] = img
@@ -303,14 +339,14 @@ class TwoDSidePanel(QVBoxLayout):
                             newOps.append(img.name)
                             break
             elif params[0] == "Sharpen":
-                for img in BlankConvolution().applySharpen(self.activeLayers, params[1]):
+                for img in BlankConvolution("Sharpen").applySharpen(self.activeLayers, params[1]):
                     for i in range(len(self.viewer.images)):
                         if self.viewer.images[i].name == img.name:
                             self.viewer.images[i] = img
                             newOps.append(img.name)
                             break
             elif params[0] == "Sobel":
-                for img in BlankConvolution().applySobel(self.activeLayers):
+                for img in BlankConvolution("Edge Detection").applySobel(self.activeLayers):
                     for i in range(len(self.viewer.images)):
                         if self.viewer.images[i].name == img.name:
                             self.viewer.images[i] = img
@@ -318,12 +354,19 @@ class TwoDSidePanel(QVBoxLayout):
                             break
             self.viewer.lastOpStack.append(newOps)
         self.viewer.update()
+    
+    def viewStackWindow(self):
+        self.window = TwoDWindows.ViewStackWindow(self.activeLayers)
+        self.window.show()
             
 class TwoDTransformationPanel(QVBoxLayout):
     def __init__(self, sidePanel):
         super().__init__()
         self.addWidget(QLabel("Transformations"))
         self.sidePanel = sidePanel
+
+        cropButton = QPushButton("Crop Image")
+        cropButton.clicked.connect(self.sidePanel.cropWindow)
 
         colourButton = QPushButton("Apply Colour Filter")
         colourButton.clicked.connect(self.sidePanel.colourWindow)
@@ -343,9 +386,13 @@ class TwoDTransformationPanel(QVBoxLayout):
         deleteButton = QPushButton("Delete selected images (irreversible)")
         deleteButton.clicked.connect(self.sidePanel.deleteImage)
 
-        saveButton = QPushButton("Save selected images")
+        saveButton = QPushButton("Export selected images separately")
         saveButton.clicked.connect(self.sidePanel.saveImage)
 
+        savePixmapButton = QPushButton("Export Canvas")
+        savePixmapButton.clicked.connect(self.sidePanel.savePixmap)
+
+        self.addWidget(cropButton)
         self.addWidget(colourButton)
         self.addWidget(convolutionButton)
         self.addWidget(showhideButton)
@@ -353,6 +400,7 @@ class TwoDTransformationPanel(QVBoxLayout):
         self.addWidget(undoButton)
         self.addWidget(deleteButton)
         self.addWidget(saveButton)
+        self.addWidget(savePixmapButton)
     
 class TwoDImagePanel(QVBoxLayout):
     def __init__(self, sidePanel):
@@ -379,8 +427,8 @@ class TwoDImagePanel(QVBoxLayout):
         addButton = QPushButton("Add new Image...")
         addButton.clicked.connect(self.sidePanel.addImage)
         self.addWidget(addButton)
-        viewStackButton = QPushButton("View Matrix Stack (Coming Soon)")
-        #viewStackButton.clicked.connect(self.sidePanel.viewStackWindow)
+        viewStackButton = QPushButton("Operation Stack")
+        viewStackButton.clicked.connect(self.sidePanel.viewStackWindow)
         self.addWidget(viewStackButton)
 
     def addLayer(self, img):

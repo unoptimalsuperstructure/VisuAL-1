@@ -17,7 +17,7 @@ def toString(lst, acc):
             if val > 0.0001:
                 val = str(val)
             else:
-                val = f"{val:f}"
+                val = f"{val:.{acc}f}"
                 extra_zeros = 0
             final = extra_spaces * " " + val
             if extra_zeros == acc + 1:

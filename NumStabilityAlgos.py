@@ -13,10 +13,6 @@ class NumStabilityViewer(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.perform_action)
-        self.timer.setInterval(0)
-
         self.pressed_keys = set()
 
         self.lastOpStack = []
@@ -24,56 +20,6 @@ class NumStabilityViewer(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-    
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton or event.button() == Qt.MouseButton.RightButton:
-            self.last_mouse_pos = event.position().toPoint()
-    
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            cur_pos = event.position().toPoint()
-            delta = cur_pos - self.last_mouse_pos
-            self.last_mouse_pos = cur_pos
-    
-    def mouseReleaseEvent(self, event):
-        pass
-            
-        self.update()
-
-    def keyPressEvent(self, event):
-        self.pressZ = False
-        self.pressH = False
-        self.pressV = False
-        if not event.isAutoRepeat():
-            self.pressed_keys.add(event.key())
-            self.perform_action()
-            if not self.timer.isActive():
-                self.timer.start()
-        
-    def keyReleaseEvent(self, event):
-        if not event.isAutoRepeat():
-            self.pressed_keys.discard(event.key())
-            if not self.pressed_keys:
-                self.timer.stop()
-        
-        self.update()
-
-    def perform_action(self):
-        if Qt.Key.Key_W in self.pressed_keys:
-            pass
-        if Qt.Key.Key_S in self.pressed_keys:
-            pass
-        if Qt.Key.Key_A in self.pressed_keys:
-            pass
-        if Qt.Key.Key_D in self.pressed_keys:
-            pass
-        if Qt.Key.Key_Z in self.pressed_keys:
-            pass
-            
-        self.update()
-
-    def update(self):
-        gc.collect()
 
 class NumStabilitySidePanel(QVBoxLayout):
     def __init__(self, viewer):
@@ -92,10 +38,6 @@ class NumStabilitySidePanel(QVBoxLayout):
         self.addWidget(addDataButton)
         self.addWidget(randomDataButton)
         self.addWidget(actionButton)
-
-    def select(self):
-        pass
-
 
     def loadCSV(self):
         file_path = QFileDialog.getOpenFileName(
