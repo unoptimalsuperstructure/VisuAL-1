@@ -45,6 +45,7 @@ function renderNodeList() {
 }
 
 function renderDistPanel() {
+  renderPlot();
   const panel = document.getElementById('mk-dist-panel');
   document.getElementById('btn-set-dist').style.display =
     state.nodes.length ? 'flex' : 'none';
@@ -60,6 +61,7 @@ function renderDistPanel() {
       '</div>';
     return;
   }
+
   panel.innerHTML = '';
   state.nodes.forEach((nd, i) => {
     const p   = state.prob[i];
