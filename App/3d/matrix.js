@@ -1,4 +1,7 @@
+// NO matrix maths with 3js in it belongs here
+
 function matMul4(A, v) {
+  // Doing this for semantics hence separated from 4x4
   return [
     A[0]*v[0]  + A[1]*v[1]  + A[2]*v[2]  + A[3]*v[3],
     A[4]*v[0]  + A[5]*v[1]  + A[6]*v[2]  + A[7]*v[3],
@@ -16,6 +19,31 @@ function matMul4x4(A, B) {
       R[r*4+c] = s;
     }
   return Array.from(R);
+}
+
+function matMul3x3(A, B) {
+  const R = new Float64Array(9);
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++) {
+      let s = 0;
+      for (let k = 0; k < 3; k++) s += A[r*3+k] * B[k*3+c];
+      R[r*3+c] = s;
+    }
+  return R;
+}
+
+function mat3T(M) {
+  return [M[0],M[3],M[6], M[1],M[4],M[7], M[2],M[5],M[8]];
+}
+
+function mat3det(M) {
+  return M[0]*(M[4]*M[8]-M[5]*M[7])
+       - M[1]*(M[3]*M[8]-M[5]*M[6])
+       + M[2]*(M[3]*M[7]-M[4]*M[6]);
+}
+
+function identity3() {
+  return [1,0,0, 0,1,0, 0,0,1];
 }
 
 function identity4() {
@@ -86,4 +114,76 @@ function applyMatrix(mat, verts, centre) {
   });
   const rc = matMul4(mat, [centre[0], centre[1], centre[2], 1]);
   return { vertices: nv, centre: [rc[0], rc[1], rc[2]] };
+}
+
+function eigSymmetric3(A) {
+  const a = A.slice();
+  const V = [1,0,0, 0,1,0, 0,0,1];
+  const ix = (r,c) => r*3 + c;
+  const pairs = [[0,1],[0,2],[1,2]];
+
+  for (let sweep = 0; sweep < 50; sweep++) {
+    if (Math.abs(a[1]) + Math.abs(a[2]) + Math.abs(a[5]) < 1e-14) break;
+    for (const [p,q] of pairs) {
+      const apq = a[ix(p,q)];
+      if (Math.abs(apq) < 1e-18) continue;
+      const theta = (a[ix(q,q)] - a[ix(p,p)]) / (2 * apq);
+      const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta*theta + 1));
+      const c = 1 / Math.sqrt(t*t + 1);
+      const s = t * c;
+      for (let k = 0; k < 3; k++) {
+        const akp = a[ix(k,p)], akq = a[ix(k,q)];
+        a[ix(k,p)] = c*akp - s*akq;
+        a[ix(k,q)] = s*akp + c*akq;
+      }
+      for (let k = 0; k < 3; k++) {
+        const apk = a[ix(p,k)], aqk = a[ix(q,k)];
+        a[ix(p,k)] = c*apk - s*aqk;
+        a[ix(q,k)] = s*apk + c*aqk;
+      }
+      for (let k = 0; k < 3; k++) {
+        const vkp = V[ix(k,p)], vkq = V[ix(k,q)];
+        V[ix(k,p)] = c*vkp - s*vkq;
+        V[ix(k,q)] = s*vkp + c*vkq;
+      }
+    }
+  }
+
+  const vals = [a[0], a[4], a[8]];
+  const cols = [[V[0],V[3],V[6]], [V[1],V[4],V[7]], [V[2],V[5],V[8]]];
+  const order = [0,1,2].sort((i,j) => vals[j] - vals[i]);
+  const sv = order.map(i => cols[i]);
+  return {
+    values: order.map(i => vals[i]),
+    vectors: [ sv[0][0],sv[1][0],sv[2][0],  sv[0][1],sv[1][1],sv[2][1],  sv[0][2],sv[1][2],sv[2][2] ],
+  };
+}
+
+function svd3(M) {
+  const { values, vectors: V } = eigSymmetric3(matMul3x3(mat3T(M), M));
+  const sig  = values.map(v => Math.sqrt(Math.max(0, v)));
+  const Vcol = [[V[0],V[3],V[6]], [V[1],V[4],V[7]], [V[2],V[5],V[8]]];
+  const Ucol = [];
+
+  for (let i = 0; i < 3; i++) {
+    const v  = Vcol[i];
+    const Mv = [ M[0]*v[0]+M[1]*v[1]+M[2]*v[2],
+                 M[3]*v[0]+M[4]*v[1]+M[5]*v[2],
+                 M[6]*v[0]+M[7]*v[1]+M[8]*v[2] ];
+    Ucol.push(sig[i] > 1e-9 ? Mv.map(x => x / sig[i]) : null);
+  }
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  for (let i = 0; i < 3; i++) {
+    if (Ucol[i]) continue;
+    const got = [0,1,2].filter(j => j !== i && Ucol[j]).map(j => Ucol[j]);
+    let u = got.length === 2 ? cross(got[0], got[1]) : [i===0?1:0, i===1?1:0, i===2?1:0];
+    const n = Math.hypot(...u) || 1;
+    Ucol[i] = u.map(x => x / n);
+  }
+  let U  = [Ucol[0][0],Ucol[1][0],Ucol[2][0], Ucol[0][1],Ucol[1][1],Ucol[2][1], Ucol[0][2],Ucol[1][2],Ucol[2][2]];
+  let Vm = V.slice();
+  if (mat3det(Vm) < 0) {                       // flip last direction → proper rotations
+    for (let r = 0; r < 3; r++) { Vm[r*3+2] *= -1; U[r*3+2] *= -1; }
+  }
+  return { U, S: sig, Vt: mat3T(Vm), V: Vm };
 }
