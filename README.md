@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.4b**
+**Current version: v0.1.4c**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -15,7 +15,7 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - SciPy
 
 ## What to expect for the next update
-Next version: v0.1.4c - Finishing touches to 2D Image Processing that I'm lazy to do now, plus a bit more work on numerical stability.
+Next version: v0.2.0a - Merged to main branch
 
 # 2D Image Processing
 
@@ -61,6 +61,12 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.4b -> v0.1.4c
+- Image pixelation ability
+- Custom convolution kernels + low-rank approximation
+- Added tooltips
+- Static assets now use relative paths, in preparation for app building
+
 v0.1.4a -> v0.1.4b
 - Image cropping ability + added intensity sliders for colour filters
 - Ability to save the entire Pixmap instead of separate images
