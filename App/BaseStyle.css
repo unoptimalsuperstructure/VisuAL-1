@@ -1,11 +1,11 @@
 :root {
-  --bg:         #ffffff;
+  --bg:         #fff;
   --panel:      #ffffffe4;
   --panel2:     #ffffffd9;
   --border:     #d0d0d0;
-  --accent:     #000000;
-  --text:       #000000;
-  --muted:      #666666;
+  --accent:     #000;
+  --text:       #000;
+  --muted:      #666;
   --warning:    #a01010;
   --font-maths: monospace;
   --font-ui:    sans-serif;
@@ -86,10 +86,9 @@ body {
 .section-head {
   padding: 10px 14px;
   font-size: 11px;
-  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: space-between;

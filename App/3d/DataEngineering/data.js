@@ -1,5 +1,7 @@
 'use strict';
 
+// Add more colour if anyone asks for more
+
 const CAT_PALETTE = [
   '#e05555', '#4a90d9', '#50b86c', '#e09c30',
   '#9b59b6', '#e07030', '#2ebdbd', '#c0396b',
@@ -25,7 +27,7 @@ const DATA = {
   svd:        null,
 };
 
-//  CSV Pasing 
+//  CSV Pasing ────────────────────────────────────────────── 
 
 function parseCSV(text) {
   const rows = [];
@@ -63,7 +65,7 @@ function isNumericColumn(rows, col) {
   return seen > 0;
 }
 
-// Data processing by z score or just to fit in the grid
+// Data processing by z score or just to fit in the grid ────────────────────────────────────────────── 
 
 function preprocess(raw, standardise) {
   const n = raw.length;

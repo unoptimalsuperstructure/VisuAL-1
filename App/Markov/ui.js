@@ -1,6 +1,6 @@
 'use strict';
 
-// Section 
+// Section ────────────────────────────────────────────── 
 
 const sectionOpen = { nodes: true, sim: true };
 
@@ -12,7 +12,7 @@ function toggleSection(id) {
   if (head) head.classList.toggle('collapsed', !sectionOpen[id]);
 }
 
-// Render sidebar
+// Render sidebar ────────────────────────────────────────────── 
 
 function renderSidebar() {
   renderNodeList();
@@ -45,6 +45,7 @@ function renderNodeList() {
 }
 
 function renderDistPanel() {
+  renderPlot();
   const panel = document.getElementById('mk-dist-panel');
   document.getElementById('btn-set-dist').style.display =
     state.nodes.length ? 'flex' : 'none';
@@ -113,8 +114,7 @@ function renderMatrixPanel() {
   panel.innerHTML = html;
 }
 
-//  EDGE WEIGHT MODAL
-//  Depends on: markov.js (state), scene.js (edgeBetween)!! 
+//  Edge weight modal ────────────────────────────────────────────── 
 
 let pendingEdge = null;
 
@@ -170,7 +170,7 @@ function closeBgClick(e) {
   if (e.target === document.getElementById('modal-bg')) closeModal();
 }
 
-// Dist mopal
+// Dist modal ──────────────────────────────────────────────
 
 function openDistModal() {
   const n = state.nodes.length;
@@ -216,9 +216,10 @@ function submitDistModal() {
   }
 
   const v = new Float64Array(vals.map(x => x / sum));
-  state.prob    = v;
-  state.history = [v.slice()];
-  state.step    = 0;
+  state.prob        = v;
+  state.history     = [v.slice()];
+  state.fullHistory = [v.slice()];
+  state.step        = 0;
   closeDistModal();
   updateStepBadge();
   renderDistPanel();
@@ -233,7 +234,7 @@ function closeDistModalBg(e) {
   if (e.target === document.getElementById('dist-modal-bg')) closeDistModal();
 }
 
-// Keyboard shortcuts
+// Keyboard shortcuts ────────────────────────────────────────────── 
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); closeDistModal(); }

@@ -1,6 +1,6 @@
 'use strict';
 
-// Node
+// Node ────────────────────────────────────────────── 
 
 let selectedNode = null;
 
@@ -51,7 +51,7 @@ function selectNode(nd) {
   render();
 }
 
-// Edge
+// Edge ────────────────────────────────────────────── 
 
 function edgeBetween(fromId, toId) {
   return state.edges.find(e => e.from === fromId && e.to === toId) || null;

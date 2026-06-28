@@ -189,7 +189,7 @@ function warn(msg) {
   el.t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
 }
  
-/* ── Colour Filter Modal ────────────────────────────────────────────── */
+// ── Colour Filter Modal ────────────────────────────────────────────── 
  
 function openColourModal() {
   if (!getActiveLayer()) return warn('Select an image first.');

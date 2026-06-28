@@ -142,7 +142,7 @@ function toggleLegend() {
   if (head) head.classList.toggle('collapsed', !legendOpen);
 }
 
-// SVD frames animation
+// SVD frames animation ────────────────────────────────────────────── 
 
 function renderSVDStep() {
   const d = DATA.svd; if (!d) return;
@@ -164,7 +164,7 @@ function fmtMat3(m) {
   return out;
 }
 
-// Reset/clear analysis/data
+// Reset/clear analysis/data ────────────────────────────────────────────── 
 
 function clearAnalysis() {
   if (DATA.fitLine) { scene.remove(DATA.fitLine); DATA.fitLine.geometry.dispose(); DATA.fitLine = null; }

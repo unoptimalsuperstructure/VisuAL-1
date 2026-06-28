@@ -17,10 +17,11 @@ const state = {
   edges:   [],
   prob:    null,  
   history: [],
+  fullHistory: [],
   step:    0,
 };
 
-// Matrix
+// Matrix ────────────────────────────────────────────── 
 
 function buildMatrix() {
   const n   = state.nodes.length;
@@ -42,10 +43,11 @@ function buildMatrix() {
   return { P, idx, ids };
 }
 
-// Simulate
+// Simulate ────────────────────────────────────────────── 
 
 let autoTimer    = null;
 let autoInterval = 600;
+const epsilon    = 1e-6; // |curr step - prev step| < \epsilon. Increase value if ppl say it takes too long to converge
 
 function simStep() {
   if (!state.prob) {
@@ -66,9 +68,24 @@ function simStep() {
   for (let i = 0; i < n; i++) { next[i] = Math.max(0, next[i]); s += next[i]; }
   if (s > 1e-12) for (let i = 0; i < n; i++) next[i] /= s;
   state.prob = next;
+  state.fullHistory.length = state.step + 1;
+  state.fullHistory.push(next.slice());
   state.history.push(next.slice());
   if (state.history.length > TRAIL_N) state.history.shift();
   state.step++;
+
+  updateStepBadge();
+  renderDistPanel();
+  render();
+}
+
+function simStepBack() {
+  // Probability in step back is not reflected but the rest are fine?????
+
+  if (state.step === 0) return;
+  state.step--;
+  state.prob = state.fullHistory[state.step].slice();
+  state.history.pop();
 
   updateStepBadge();
   renderDistPanel();
@@ -79,6 +96,7 @@ function simReset() {
   state.prob    = null;
   state.history = [];
   state.step    = 0;
+
   updateStepBadge();
   renderDistPanel();
   render();

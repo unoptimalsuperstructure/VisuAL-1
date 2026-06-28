@@ -11,7 +11,7 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 
-// Mode section
+// Mode section ────────────────────────────────────────────── 
 
 const HINTS = {
   node: 'Click canvas to place a node · Drag any node to reposition it',
@@ -40,7 +40,7 @@ function hexAlpha(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
 }
 
-// Rendering
+// Rendering ────────────────────────────────────────────── 
 
 function render() {
   const W = canvas.width, H = canvas.height;
@@ -150,7 +150,7 @@ function render() {
   });
 }
 
-// Draw-er functions
+// Draw-er functions ────────────────────────────────────────────── 
 
 function drawArrow(from, to, normW, rawW, offset, showWeights) {
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -229,7 +229,7 @@ function drawSelfLoop(nd, normW, rawW, showWeights) {
   }
 }
 
-// Canvas events
+// Canvas events ────────────────────────────────────────────── 
 
 function canvasXY(e) {
   const rect = canvas.getBoundingClientRect();
@@ -303,7 +303,7 @@ canvas.addEventListener('mouseleave', () => { dragging = null; });
 
 // To implement "arrange edges" for tidiness (ref to chem draw for auto arrangement of molecule drawing) 
 
-// Load Canvas 
+// Load Canvas ────────────────────────────────────────────── 
 
 resizeCanvas();
 setMode('node');
