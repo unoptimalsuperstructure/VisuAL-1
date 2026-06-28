@@ -19,7 +19,7 @@ function makeAxis(from, to, color) {
   return new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
 }
 
-// find out why x and y axes are not coloured
+// x and y axis not coloured, might be due to the grid helper since z axis is not affected
 scene.add(makeAxis([-10,0,0], [10,0,0], 0xcc0000));
 scene.add(makeAxis([0,-10,0], [0,10,0], 0x00aa00));
 scene.add(makeAxis([0,0,-10], [0,0,10], 0x0000cc));
