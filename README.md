@@ -11,7 +11,8 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - OpenCV-Python
 - PyMongo
 - PyOpenGL
-- PyQt6
+- PyQt6 (NOT PySide6)
+- qimage2ndarray
 - SciPy
 
 ## What to expect for the next update
