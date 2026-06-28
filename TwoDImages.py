@@ -1,10 +1,12 @@
+import os, sys, subprocess
+from pathlib import Path
 import TwoDWindows, gc
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import *
-from PyQt6.QtCore import Qt, QTimer
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from PyQt6.QtCore import Qt, QPoint, QTimer, QEvent
+from Tooltips import TooltipButton
 from Images import *
+from PathFinder import resource_path
 
 class TwoDViewer(QWidget):
     def __init__(self, initImages, res):
@@ -33,7 +35,7 @@ class TwoDViewer(QWidget):
         self.topImg = QLabel()
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            self.canvas = QPixmap("static/canvas.png").scaled(self.size())
+            self.canvas = QPixmap(str(resource_path("static/canvas.png"))).scaled(self.size())
             painter = QPainter(self.canvas)
             for image in self.images:
                 if image.show:
@@ -136,7 +138,7 @@ class TwoDViewer(QWidget):
     def update(self):
         self.topImg.setPixmap(QPixmap())
         if self.images:
-            self.canvas = QPixmap("static/canvas.png").scaled(self.size())
+            self.canvas = QPixmap(str(resource_path("static/canvas.png"))).scaled(self.size())
             painter = QPainter(self.canvas)
             for image in self.images:
                 if image.show:
@@ -265,7 +267,7 @@ class TwoDSidePanel(QVBoxLayout):
         image.crop(params[1:], True)
         self.viewer.lastOpStack.append([image.name])
         self.viewer.update()
-
+    
     def colourWindow(self):
         self.window = TwoDWindows.ColourWindow(self.activeLayers)
         self.window.show()
@@ -338,6 +340,13 @@ class TwoDSidePanel(QVBoxLayout):
                             self.viewer.images[i] = img
                             newOps.append(img.name)
                             break
+            elif params[0] == "Pixelate":
+                for img in BlankConvolution("Pixelate").applyPixelate(self.activeLayers, params[1]):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
             elif params[0] == "Sharpen":
                 for img in BlankConvolution("Sharpen").applySharpen(self.activeLayers, params[1]):
                     for i in range(len(self.viewer.images)):
@@ -347,6 +356,13 @@ class TwoDSidePanel(QVBoxLayout):
                             break
             elif params[0] == "Sobel":
                 for img in BlankConvolution("Edge Detection").applySobel(self.activeLayers):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
+            elif params[0] == "Custom":
+                for img in BlankConvolution("Custom Convolution").applyCustom(self.activeLayers, *params[1:]):
                     for i in range(len(self.viewer.images)):
                         if self.viewer.images[i].name == img.name:
                             self.viewer.images[i] = img
@@ -365,32 +381,69 @@ class TwoDTransformationPanel(QVBoxLayout):
         self.addWidget(QLabel("Transformations"))
         self.sidePanel = sidePanel
 
-        cropButton = QPushButton("Crop Image")
+        cropButton = TooltipButton("Crop Image",
+                                   "Crop",
+                                   "Crop the currently selected image")
         cropButton.clicked.connect(self.sidePanel.cropWindow)
+        cropButton.installEventFilter(self)
 
-        colourButton = QPushButton("Apply Colour Filter")
+        colourButton = TooltipButton("Apply Colour Filter",
+                                     "FilterImage",
+                                     "Apply a colour filter to the\n" \
+                                     "currently selected image(s)")
         colourButton.clicked.connect(self.sidePanel.colourWindow)
+        colourButton.installEventFilter(self)
 
-        convolutionButton = QPushButton("Apply Convolution")
+        convolutionButton = TooltipButton("Apply Convolution",
+                                          "ConvolveImage",
+                                          "Apply a convolution to the\n" \
+                                          "currently selected image(s)")
         convolutionButton.clicked.connect(self.sidePanel.convolutionWindow)
+        convolutionButton.installEventFilter(self)
 
-        showhideButton = QPushButton("Show/Hide selected images")
+        showhideButton = TooltipButton("Show/Hide selected images",
+                                       "ShowHideImage",
+                                       "Show or hide the currently\n" \
+                                       "selected image(s)")
         showhideButton.clicked.connect(self.sidePanel.showhide)
+        showhideButton.installEventFilter(self)
 
-        rerenderButton = QPushButton("Re-Render Image")
+        rerenderButton = TooltipButton("Re-Render Image",
+                                       "Repeat",
+                                       "Re-render the selected image(s)\n" \
+                                       "at their native resolution")
         rerenderButton.clicked.connect(self.sidePanel.rerender)
+        rerenderButton.installEventFilter(self)
 
-        undoButton = QPushButton("Undo")
+        undoButton = TooltipButton("Undo",
+                                   "Undo",
+                                   "Undo the most recent filters or\n" \
+                                   "convolutions, or delete the most\n" \
+                                   "recently added image(s) if there\n" \
+                                   "are none")
         undoButton.clicked.connect(self.sidePanel.undo)
+        undoButton.installEventFilter(self)
 
-        deleteButton = QPushButton("Delete selected images (irreversible)")
+        deleteButton = TooltipButton("Delete selected images (irreversible)",
+                                     "Delete",
+                                     "Delete the current image(s)\n" \
+                                     "permanently. IRREVERSIBLE!")
         deleteButton.clicked.connect(self.sidePanel.deleteImage)
+        deleteButton.installEventFilter(self)
 
-        saveButton = QPushButton("Export selected images separately")
+        saveButton = TooltipButton("Export selected images separately",
+                                   "ExportSeparately",
+                                   "Save the currently selected image(s)\n" \
+                                   "to separate files")
         saveButton.clicked.connect(self.sidePanel.saveImage)
+        saveButton.installEventFilter(self)
 
-        savePixmapButton = QPushButton("Export Canvas")
+        savePixmapButton = TooltipButton("Export Canvas",
+                                         "ExportAsOne",
+                                         "Save all image(s) currently \n" \
+                                         "displayed to a single canvas")
         savePixmapButton.clicked.connect(self.sidePanel.savePixmap)
+        savePixmapButton.installEventFilter(self)
 
         self.addWidget(cropButton)
         self.addWidget(colourButton)
@@ -401,6 +454,25 @@ class TwoDTransformationPanel(QVBoxLayout):
         self.addWidget(deleteButton)
         self.addWidget(saveButton)
         self.addWidget(savePixmapButton)
+    
+    def eventFilter(self, obj, event):
+        if isinstance(obj, TooltipButton):
+            if event.type() == QEvent.Type.Enter:
+                self.show_bubble_above_button(obj)
+                return True
+            elif event.type() == QEvent.Type.Leave:
+                obj.tooltip.hide()
+                return True
+        return super().eventFilter(obj, event)
+
+    def show_bubble_above_button(self, button):
+        button_global_pos = button.mapToGlobal(QPoint(0, 0))
+        
+        x = button_global_pos.x() - button.tooltip.width() - 15
+        y = button_global_pos.y() + (button.height() // 2) - (button.tooltip.height() // 2)
+        
+        button.tooltip.move(x, y)
+        button.tooltip.show()
     
 class TwoDImagePanel(QVBoxLayout):
     def __init__(self, sidePanel):
@@ -424,11 +496,19 @@ class TwoDImagePanel(QVBoxLayout):
             self.addLayer(img)
         self.imagesLayout.addWidget(self.layers, alignment = Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(images)
-        addButton = QPushButton("Add new Image...")
+        addButton = TooltipButton("Add new Image...",
+                                  "AddImage",
+                                  "Add an image to the canvas")
         addButton.clicked.connect(self.sidePanel.addImage)
+        addButton.installEventFilter(self)
         self.addWidget(addButton)
-        viewStackButton = QPushButton("Operation Stack")
+        viewStackButton = TooltipButton("Operation Stack",
+                                        "MatrixStack",
+                                        "View matrices for colour filters or\n" \
+                                        "linear convolution kernels for the\n" \
+                                        "currently selected image")
         viewStackButton.clicked.connect(self.sidePanel.viewStackWindow)
+        viewStackButton.installEventFilter(self)
         self.addWidget(viewStackButton)
 
     def addLayer(self, img):
@@ -458,3 +538,22 @@ class TwoDImagePanel(QVBoxLayout):
             new_order.append(self.layers.item(i).img)
         self.sidePanel.viewer.images = new_order[::-1]
         self.sidePanel.viewer.update()
+    
+    def eventFilter(self, obj, event):
+        if isinstance(obj, TooltipButton):
+            if event.type() == QEvent.Type.Enter:
+                self.show_bubble_above_button(obj)
+                return True
+            elif event.type() == QEvent.Type.Leave:
+                obj.tooltip.hide()
+                return True
+        return super().eventFilter(obj, event)
+
+    def show_bubble_above_button(self, button):
+        button_global_pos = button.mapToGlobal(QPoint(0, 0))
+        
+        x = button_global_pos.x() - button.tooltip.width() - 15
+        y = button_global_pos.y() + (button.height() // 2) - (button.tooltip.height() // 2)
+        
+        button.tooltip.move(x, y)
+        button.tooltip.show()

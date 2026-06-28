@@ -16,8 +16,10 @@ class Image:
         else:
             self.ow, self.oh = w, h
         self.image = cv2.resize(self.original, (self.ow, self.oh))
-        self.path = path
-        self.name = path.split("/")[-1]
+        self.path = str(path)
+        name1 = self.path.split("/")[-1]
+        name2 = self.path.split("\\")[-1]
+        self.name = name1 if len(name1) < len(name2) else name2
         self.out = ""
         
         self.channels = self.image.shape[2] if len(self.image.shape) == 3 else 1
@@ -47,12 +49,13 @@ class Image:
                 temp = op[2].applyToRawImage(temp)
             elif isinstance(op[2], IndividualConvolution): # Non-standard convolution such as Sobel or unmasked sharpening
                 temp = op[2].get(temp)
+                if isinstance(temp, tuple):
+                    temp = temp[0]
             elif isinstance(op[2], list) and op[2][0] == "Crop":
                 h, w = self.original.shape[:2]
                 params = []
                 for j in range(4):
                     params.append(int(op[2][1][j] * (w if j < 2 else h)))
-                print(params)
                 temp = temp[params[0]:params[1],params[2]:params[3]]
         temp = temp.astype(np.uint8)
         cv2.imwrite(path, temp)
@@ -76,7 +79,7 @@ class Image:
         self.stack[0][0] = self.image
         i = 0
         for op in tempStack:
-            if isinstance(op[2], list) and op[2][0] == "Crop":
+            if (isinstance(op[2], list)) and op[2][0] == "Crop":
                 params = []
                 for j in range(4):
                     params.append(int(op[2][1][j] * (self.ow if j < 2 else self.oh)))
@@ -85,7 +88,11 @@ class Image:
                 try:
                     self.image = op[2].applyToRawImage(self.image).astype(np.float32)
                 except:
-                    self.image = op[2].get(self.image).astype(np.float32)
+                    operation = op[2].get(self.image)
+                    if isinstance(operation, tuple):
+                        self.image = operation[0].astype(np.float32)
+                    else:
+                        self.image = operation.astype(np.float32)
             self.stack.append([self.image, tempStack[i][1], tempStack[i][2]])
             i += 1
         del tempStack
@@ -208,10 +215,18 @@ class Convolution:
             self.result.append(layer.img)
         return self.result
     
+    def applyPixelate(self, layers, v):
+        for layer in layers:
+            pixelate = Pixelate(v)
+            layer.img.stack.append([pixelate.get(layer.img.stack[-1][0]), layer.img.channels, pixelate])
+            self.result.append(layer.img)
+            layer.img.matrixStack.append([self.matrix, self.name])
+        return self.result
+
     def applySobel(self, layers):
         for layer in layers:
             sobel = Sobel()
-            layer.img.stack.append([sobel.get(layer.img.stack[-1][0]), 4, sobel])
+            layer.img.stack.append([sobel.get(layer.img.stack[-1][0]), layer.img.channels, sobel])
             self.result.append(layer.img)
             layer.img.matrixStack.append([self.matrix, self.name])
         return self.result
@@ -219,8 +234,18 @@ class Convolution:
     def applySharpen(self, layers, v):
         for layer in layers:
             sharpen = Sharpen(v)
-            layer.img.stack.append([sharpen.get(layer.img.stack[-1][0]), 4, sharpen])
+            layer.img.stack.append([sharpen.get(layer.img.stack[-1][0]), layer.img.channels, sharpen])
             self.result.append(layer.img)
+            layer.img.matrixStack.append([self.matrix, self.name])
+        return self.result
+    
+    def applyCustom(self, layers, matrix, n):
+        for layer in layers:
+            custom = Custom(matrix, n)
+            res, self.matrix = custom.get(layer.img.stack[-1][0])
+            layer.img.stack.append([res, layer.img.channels, custom])
+            self.result.append(layer.img)
+            self.name = "Custom Convolution (" + (f"order-{n} approximation)" if n < np.linalg.matrix_rank(matrix) else "exact)")
             layer.img.matrixStack.append([self.matrix, self.name])
         return self.result
     
@@ -265,6 +290,17 @@ class IndividualConvolution:
     def __init__(self, params):
         self.params = params
 
+class Pixelate(IndividualConvolution):
+    def __init__(self, v):
+        super().__init__([v])
+        
+    def get(self, image):
+        h, w = image.shape[:2]
+        size = int(max(h, w) / self.params[0])
+        temp = cv2.resize(image, (size, size), interpolation=cv2.INTER_LINEAR)
+        pixelated = cv2.resize(temp, (w, h), interpolation=cv2.INTER_NEAREST)
+        return pixelated
+
 class Sharpen(IndividualConvolution):
     def __init__(self, v):
         super().__init__([v])
@@ -299,3 +335,22 @@ class Sobel(IndividualConvolution):
         rgba[:, :, 2] = 0  # Red
         rgba[:, :, 3] = bwImg
         return rgba
+
+class Custom(IndividualConvolution):
+    def __init__(self, matrix, n):
+        super().__init__([matrix, n])
+    
+    def get(self, image):
+        image = image.astype(np.float32)
+        matrix, n = self.params
+        u, sigma, v = np.linalg.svd(matrix)
+
+        if n == np.linalg.matrix_rank(matrix):
+            return np.clip(cv2.filter2D(image, -1, matrix), 0, 255).astype(np.uint8), matrix
+        
+        else:
+            matrix = np.zeros_like(matrix, np.float32)
+            for i in range(n):
+                matrix += sigma[i] * np.outer(u.T[i], v[i])
+
+        return np.clip(cv2.filter2D(image, -1, matrix), 0, 255).astype(np.uint8), matrix

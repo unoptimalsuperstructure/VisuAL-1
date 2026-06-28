@@ -24,6 +24,8 @@ class ErrorWindow(QWidget):
             self.layout.addWidget(QLabel("At least one of your entries is invalid. Please try again."))
         elif type == 2:
             self.layout.addWidget(QLabel("Matrix has inconsistent dimensions. Please try again."))
+        elif type == 99: #Invalid convolution matrix (even dimensions)
+            self.layout.addWidget(QLabel("Convolution kernel must have odd dimensions. Please try again."))
         else:
             self.layout.addWidget(QLabel("Unknown error occurred."))
         self.submit = QPushButton("OK")

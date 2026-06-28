@@ -1,4 +1,4 @@
-import gc, sys
+import os, sys, subprocess
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPixmap, QAction
 from PyQt6.QtCore import QEvent, Qt
@@ -7,6 +7,12 @@ from ThreeDGraphics import ThreeDViewer, ThreeDSidePanel
 from NumStabilityAlgos import NumStabilityViewer, NumStabilitySidePanel
 from Images import Image
 import Shapes, json
+from PathFinder import resource_path
+
+global restart
+restart = False
+
+app = QApplication(sys.argv)
 
 class HomeBar(QHBoxLayout):
     def __init__(self):
@@ -21,18 +27,22 @@ class OptionPanel(QVBoxLayout):
         self.Button1 = QPushButton("2D Image Processing")
         self.Button2 = QPushButton("3D Graphics Sandbox")
         self.Button3 = QPushButton("Numerical Stability")
-        self.Button4 = QPushButton("Markov Chains")
+        #self.Button4 = QPushButton("Markov Chains")
+        self.Button5 = QPushButton("Size Setting")
         self.Button1.setFixedWidth(150)
         self.Button2.setFixedWidth(150)
         self.Button3.setFixedWidth(150)
-        self.Button4.setFixedWidth(150)
+        #self.Button4.setFixedWidth(150)
+        self.Button5.setFixedWidth(150)
         self.Button1.clicked.connect(self.TwoDee)
         self.Button2.clicked.connect(self.ThreeDee)
         self.Button3.clicked.connect(self.NumStability)
+        self.Button5.clicked.connect(self.SizeConfig)
         self.addWidget(self.Button1)
         self.addWidget(self.Button2)
         self.addWidget(self.Button3)
-        self.addWidget(self.Button4)
+        #self.addWidget(self.Button4)
+        self.addWidget(self.Button5)
         
         self.addWidget(QLabel("Hello!"))
 
@@ -41,16 +51,17 @@ class OptionPanel(QVBoxLayout):
         self.Button1.installEventFilter(self)
         self.Button2.installEventFilter(self)
         self.Button3.installEventFilter(self)
-        self.Button4.installEventFilter(self)
+        #self.Button4.installEventFilter(self)
+        self.Button5.installEventFilter(self)
     
     def eventFilter(self, obj, event):
-        if obj in [self.Button1, self.Button3, self.Button4]:
+        if obj in [self.Button1, self.Button3, self.Button5]:
             width = int(self.mainWindow.previewPanel.width()//1.2)
             height = int(self.mainWindow.previewPanel.height()//1.2)
             img = self.previewPanelLayout.previewImage
             label = self.previewPanelLayout.defaultLabel
             if not self.hover:
-                img.setPixmap(QPixmap("static/ComingSoon.png").scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
+                img.setPixmap(QPixmap(str(resource_path("static/ComingSoon.png"))).scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
                 if event.type() == QEvent.Type.Enter:
                     img.show()
                     label.hide()
@@ -66,7 +77,7 @@ class OptionPanel(QVBoxLayout):
             img = self.previewPanelLayout.previewImage
             label = self.previewPanelLayout.defaultLabel
             if not self.hover:
-                img.setPixmap(QPixmap("static/3DGraphics.png").scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
+                img.setPixmap(QPixmap(str(resource_path("static/3DGraphics.png"))).scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio))
                 if event.type() == QEvent.Type.Enter:
                     img.show()
                     label.hide()
@@ -92,6 +103,10 @@ class OptionPanel(QVBoxLayout):
         self.newWindow = NumStabilityMainWindow()
         self.newWindow.show()
         self.mainWindow.close()
+    
+    def SizeConfig(self):
+        self.newWindow = SizeConfigWindow()
+        self.newWindow.show()
 
 class PreviewPanel(QVBoxLayout):
     def __init__(self, home):
@@ -109,8 +124,8 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4b - Home")
-        f1 = open("sizeconfig.txt")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4c - Home")
+        f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = int(f1.readline())
         f1.close()
         if self.size == 1:
@@ -177,8 +192,8 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4b - 2D Image Processing")
-        f1 = open("sizeconfig.txt")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4c - 2D Image Processing")
+        f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = f1.readline()
         try:
             self.size = int(self.size)
@@ -187,7 +202,7 @@ class TwoDMainWindow(QMainWindow):
         except:
             sys.exit()
         f1.close()
-        self.viewer = TwoDViewer([Image("static/kagura.png", self.size)], self.size)
+        self.viewer = TwoDViewer([Image(resource_path("static/kagura.png"), self.size)], self.size)
         if self.size == 1:
             self.resize(800, 600 - 30)
             self.viewer.setFixedSize(560, 420)
@@ -238,8 +253,8 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4b - 3D Visualiser")
-        f1 = open("sizeconfig.txt")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4c - 3D Visualiser")
+        f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = int(f1.readline())
         f1.close()
         self.viewer = ThreeDViewer(shapes, linesPlanes, namespace)
@@ -384,7 +399,7 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.1.4b - Numerical Stability")
+        self.setWindowTitle("Visu(AL)-1 v0.1.4c - Numerical Stability")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -416,9 +431,49 @@ class NumStabilityMainWindow(QMainWindow):
         self.window.show()
         event.accept()
 
-app = QApplication(sys.argv)
+class SizeConfigWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Size Configuration")
+        
+        central = QWidget()
+        self.setCentralWidget(central)
+
+        self.mainLayout = QGridLayout()
+        central.setLayout(self.mainLayout)
+
+        self.mainLayout.addWidget(QLabel("Config size:"), 0, 0)
+        self.sizeBox = QSpinBox()
+        self.sizeBox.setRange(1, 4)
+        self.mainLayout.addWidget(self.sizeBox, 0, 1)
+        self.mainLayout.addWidget(QLabel("Configure the default window size for Visu(AL)-1 depending on your display resolution.\n" \
+                                         "Currently only supported for 3D Visualiser and 2D Image Processing.\n\n" \
+                                         "Size 1: Use this for 800x600 displays. Preview panels will be sized to 560x420.\n" \
+                                         "Size 2: Use this for 1024x768 displays. Preview panels will be sized to 720x540.\n" \
+                                         "Size 3: Suitable for displays 1280x720 or larger. 2D image processing panel will be\n" \
+                                         "sized to 960x540, and 3D graphics has no theoretical limit.\n" \
+                                         "Size 4: Enable high-definition image previews for 2D image processing; preview panel will be\n" \
+                                         "sized to 1600x900. Warning: Higher memory load and requires a 1920x1080 or larger display."), 1, 0, 1, 2)
+        self.submit = QPushButton("Save (requires system restart)")
+        self.submit.clicked.connect(self.updateSize)
+        self.mainLayout.addWidget(self.submit, 2, 0, 1, 2)
+    
+    def updateSize(self):
+        f1 = open(resource_path("static/sizeconfig.txt"), "w")
+        f1.write(str(self.sizeBox.value()))
+        f1.close()
+        global restart
+        restart = True
+        app.quit()
 
 window = HomeWindow()
 window.show()
 
-sys.exit(app.exec())
+exitCode = app.exec()
+
+if restart:
+    subprocess.Popen([sys.executable, *sys.argv], close_fds=True)
+    os._exit(0)
+
+sys.exit(exitCode)

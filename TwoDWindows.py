@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap, QPainter, QFont
-from MatrixPrinter import toString, concat
-import cv2, qimage2ndarray, math, numpy as np
+from MatrixPrinter import toString, displayAsMatrix
+from NumStabilityWindows import ErrorWindow as NSEW
+import csv, cv2, qimage2ndarray, math, numpy as np
 
 def num(x):
     if x == "":
@@ -128,12 +129,18 @@ class ConvolutionWindow(QWidget):
             gaussian = QRadioButton("Gaussian Blur")
             gaussian.toggled.connect(self.gaussianBlur)
             convListLayout.addWidget(gaussian)
+            pixelate = QRadioButton("Pixelate*")
+            pixelate.toggled.connect(self.pixelate)
+            convListLayout.addWidget(pixelate)
             sharpen = QRadioButton("Sharpen")
             sharpen.toggled.connect(self.sharpen)
             convListLayout.addWidget(sharpen)
             sobel = QRadioButton("Sobel Edge Detection")
             sobel.toggled.connect(self.sobel)
             convListLayout.addWidget(sobel)
+            custom = QRadioButton("Custom Convolution Kernel")
+            custom.toggled.connect(self.custom)
+            convListLayout.addWidget(custom)
 
             convList.setLayout(convListLayout)
 
@@ -207,6 +214,27 @@ class ConvolutionWindow(QWidget):
         values = QWidget()
         values.setLayout(self.valuesLayout)
         self.layout.addWidget(values, 1, 1, 1, 1)
+    
+    def pixelate(self):
+        self.layout.removeWidget(self.submit)
+        while self.valuesLayout.count() > 0:
+            widget = self.valuesLayout.itemAt(0).widget()
+            self.valuesLayout.removeWidget(widget)
+            widget.deleteLater()
+        
+        self.v = QSpinBox()
+        self.v.setRange(2, 10)
+        self.valuesLayout.addWidget(QLabel("Pixelation radius:"), 0, 0)
+        self.valuesLayout.addWidget(self.v, 0, 1)
+        self.valuesLayout.addWidget(QLabel("*Note: Non-linear convolution"), 1, 0, 1, 2)
+
+        self.submit = QPushButton("Submit")
+        self.submit.clicked.connect(self.pixelateSend)
+        self.layout.addWidget(self.submit, 2, 0, 1, 2)
+
+        values = QWidget()
+        values.setLayout(self.valuesLayout)
+        self.layout.addWidget(values, 1, 1, 1, 1)
 
     def sharpen(self):
         self.layout.removeWidget(self.submit)
@@ -247,6 +275,102 @@ class ConvolutionWindow(QWidget):
         values = QWidget()
         values.setLayout(self.valuesLayout)
         self.layout.addWidget(values, 1, 1, 1, 1)
+    
+    def custom(self):
+        self.layout.removeWidget(self.submit)
+        self.valid = False
+        while self.valuesLayout.count() > 0:
+            widget = self.valuesLayout.itemAt(0).widget()
+            self.valuesLayout.removeWidget(widget)
+            widget.deleteLater()
+
+        self.valuesLayout.addWidget(QLabel("Upload a convolution kernel matrix as a CSV.\n" \
+                                           "Note: The matrix must have odd dimensions."), 0, 0, 1, 2)
+
+        self.upload = QPushButton("Upload CSV")
+        self.upload.clicked.connect(self.loadCSV)
+        self.valuesLayout.addWidget(self.upload, 0, 2)
+
+        self.submit = QPushButton("Submit")
+        self.submit.clicked.connect(self.customSend)
+        self.layout.addWidget(self.submit, 2, 0, 1, 2)
+
+        values = QWidget()
+        values.setLayout(self.valuesLayout)
+        self.layout.addWidget(values, 1, 1, 1, 1)
+    
+    def loadCSV(self):
+        file_path = QFileDialog.getOpenFileName(
+            None,
+            "Select CSV File",
+            "",
+            "CSV Files (*.csv)"
+        )[0]
+
+        if not file_path:
+            return
+
+        try:
+            self.valuesLayout.removeWidget(self.displayMatrix)
+            self.displayMatrix.deleteLater()
+            self.valuesLayout.removeWidget(self.n)
+            self.n.deleteLater()
+            self.valuesLayout.removeWidget(self.label1)
+            self.label1.deleteLater()
+            self.valuesLayout.removeWidget(self.label2)
+            self.label2.deleteLater()
+        except:
+            pass
+
+        mat = []
+        self.valid = True
+
+        with open(file_path) as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                try:
+                    mat.append(list(map(lambda x: float(x), row)))
+                except:
+                    self.valid = False
+                    self.error = NSEW(1, None)
+                    self.error.show()
+                    break
+        
+        try:
+            self.matrix = np.array(mat)
+            self.rank = np.linalg.matrix_rank(self.matrix)
+        except:
+            self.valid = False
+            self.error = NSEW(2, None)
+            self.error.show()
+        
+        r, c = np.shape(self.matrix)
+        if r % 2 == 0 or c % 2 == 0:
+            self.valid = False
+            self.error = NSEW(99, None)
+            self.error.show()
+        
+        if self.valid:
+            disp = displayAsMatrix(toString(self.matrix, 3), False)
+            self.displayMatrix = QLabel(disp)
+            self.displayMatrix.setStyleSheet("""
+            * {
+                font-size: 12px;
+                font-family: Cascadia Mono;
+                text-align: center;
+            }
+            """)
+
+            self.valuesLayout.addWidget(self.displayMatrix, 1, 0, 1, 3)
+
+            self.n = QSpinBox()
+            self.n.setRange(1, self.rank)
+            self.n.setValue(self.rank)
+            self.label1 = QLabel("Order of approximation:")
+            self.label2 = QLabel("<i>Leave it as is for exact calculation</i>")
+            self.valuesLayout.addWidget(self.label1, 2, 0, 1, 2)
+            self.valuesLayout.addWidget(self.n, 2, 2)
+            self.valuesLayout.addWidget(self.label2, 3, 0, 1, 3)
 
     def boxSend(self):
         rad = self.radius.value()
@@ -268,6 +392,11 @@ class ConvolutionWindow(QWidget):
             self.params.emit(["Gaussian", rad, sd])
         self.close()
     
+    def pixelateSend(self):
+        v = self.v.value()
+        self.params.emit(["Pixelate", v])
+        self.close()
+    
     def sharpenSend(self):
         v = self.v.value() / 100
         self.params.emit(["Sharpen", v])
@@ -276,6 +405,11 @@ class ConvolutionWindow(QWidget):
     def sobelSend(self):
         self.params.emit(["Sobel"])
         self.close()
+    
+    def customSend(self):
+        if self.valid:
+            self.params.emit(["Custom", self.matrix, self.n.value()])
+            self.close()
     
     def closeEvent(self, event):
         event.accept()

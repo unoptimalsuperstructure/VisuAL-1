@@ -8,6 +8,7 @@ from Tooltips import TooltipButton
 from pathlib import Path
 from bson import json_util
 from pymongo import MongoClient
+from PathFinder import resource_path
 
 class ThreeDViewer(QOpenGLWidget):
     def __init__(self, initSolids, initLinesPlanes, namespace):
@@ -24,7 +25,7 @@ class ThreeDViewer(QOpenGLWidget):
         self.objects = initSolids
         self.namespace = namespace
 
-        for json_file in Path("./Sample Shapes/Solids").glob("*.json"):
+        for json_file in resource_path("./Sample Shapes/Solids").glob("*.json"):
             try:
                 with open(json_file, "r") as file:
                     res = self.solids.find_one({"name": json_file.name[:-5]})
@@ -35,7 +36,7 @@ class ThreeDViewer(QOpenGLWidget):
         
         if initSolids == []:
             try:
-                with open("./Sample Shapes/Solids/Cube.json", "r") as file:
+                with open(resource_path("./Sample Shapes/Solids/Cube.json"), "r") as file:
                     cube = json.load(file)
                     self.objects.append(Shapes.Solid("Cube-1", cube['vertices'], cube['edges'], cube['surfaces'], [1, 0, 0, 0]))
                     self.namespace.append("Cube")
