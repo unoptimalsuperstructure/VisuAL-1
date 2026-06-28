@@ -1,6 +1,6 @@
 # Installation Guide
 
-This is VisuAL-1 installation guide for reference
+If you are running the py file by cloning the repo, this is VisuAL-1 installation guide for reference
 
 ## Pre-req
 
@@ -35,7 +35,7 @@ For Arch users, use paru or yay to install mongodb or mongodb-bin. E.g
 ```bash
 paru -S mongodb-bin
 ```
-
+## Steps
 ### 1. Clone the repo
 
 If you do not have git, download the repo as a zip file 
@@ -62,8 +62,44 @@ To install pip modules, run (rmb to activate venv if needed)
 pip install -r requirements.txt
 ```
 
-### 3. Run the app
+### 3. Start MongoDB
+
+For Linux based OS, run the code below. The second line is to check your MongoDB connection
+```
+sudo systemctl start mongodb
+sudo systemctl status mongodb
+```
+
+### 4. Run the app
 
 ```bash
 python Main.py
 ```
+
+## Compatibility issues
+
+- When running Main.py on flatpak / snap installed vscode, opening 3d rendering will crash. As such please run `python3 Main.py` on your own terminal instead. 
+    
+    I have not tested AUR maintained vscode, if it runs into the same issue, just follow whatever mentioned
+
+- For any Linux 6.19+ kernel users, note that mongodb will crash, the work around is to run `sudo systemctl edit mongodb.service` and edit `Environment="GLIBC_TUNABLES=glibc.pthread.rseq=0"` to `Environment="GLIBC_TUNABLES=glibc.pthread.rseq=1"` 
+
+    - If it shows this
+        ```bash
+        [hehehe@archlinux VisuAL-1]$ sudo systemctl edit mongodb
+        /etc/systemd/system/mongodb.service.d/override.conf: after editing, new contents are empty, not writing file.
+        ```
+        run this to fix it
+        ```
+        sudo mkdir -p /etc/systemd/system/mongodb.service.d
+        sudo tee /etc/systemd/system/mongodb.service.d/override.conf << 'EOF'
+        [Service]
+        Environment="GLIBC_TUNABLES=glibc.pthread.rseq=1"
+        EOF
+        ```
+    Afterward, run 
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl restart mongodb
+    sudo systemctl status mongodb
+    ```
