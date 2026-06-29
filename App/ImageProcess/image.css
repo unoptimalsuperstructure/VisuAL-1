@@ -1,0 +1,161 @@
+* ── Layer list ─────────────────────────────────────────────────── */
+#layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.layer-name {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Controls hint ──────────────────────────────────────────────── */
+
+.hint-block {
+  padding: 12px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+}
+
+.hint-block strong {
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-maths);
+}
+
+/* ── Sidebar warning flash ──────────────────────────────────────── */
+
+#sidebar-warning {
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--warning);
+  opacity: 0;
+  transition: opacity 0.25s;
+  min-height: 24px;
+}
+
+/* ── Colour Modal ────────────────────────────────────────────── */
+
+.colour-modal {
+  width: 380px;
+}
+
+/* ── Modal type selector ────────────────────────────────────────── */
+
+.type-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.type-opt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.type-opt input[type="radio"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/* ── Colour filter sliders ──────────────────────────────────────── */
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.ch-label {
+  width: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-maths);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.slider-val {
+  width: 40px;
+  font-size: 11px;
+  font-family: var(--font-maths);
+  color: var(--text);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Blur modal note ────────────────────────────────────────────── */
+
+.blur-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+/* ── Steps panel ────────────────────────────────────────────────── */
+
+#step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.step-idx {
+  width: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-maths);
+  color: var(--muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.step-row.active .step-idx { color: var(--text); }
+
+
+.step-row.future { opacity: 0.45; }
+.step-row.future:hover { opacity: 0.75; }
+
+/* Step by step delete when hover */
+.step-del {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
+}
+.step-row:hover .step-del { opacity: 1; }
+.step-del:hover { background: #fce8e8; color: var(--warning); }
+
+/* Drag-to-reorder feedback */
+.step-row[draggable="true"] { cursor: grab; }
+.step-row.dragging  { opacity: 0.35; }
+.step-row.drag-over { box-shadow: inset 0 2px 0 var(--accent); }
