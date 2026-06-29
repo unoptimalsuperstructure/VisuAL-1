@@ -1,0 +1,71 @@
+name: Build app w pyinstaller
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['windows-latest', 'ubuntu-latest', 'macos-latest']
+    env:
+      MAIN_PY_FILE: 'Main.py'
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+      working-directory: ./
+
+    - name: Install PyInstaller
+      run: |
+        pip install pyinstaller pyinstaller-hooks-contrib
+      working-directory: ./
+
+    - name: Build executable
+      shell: bash
+      run: |
+        ARGS=(--onefile --name "VisuAL-${{ matrix.os }}" --collect-all OpenGL)
+        for dir in */; do
+          dir="${dir%/}"
+          if [ "$dir" != "App" ]; then
+            ARGS+=(--add-data "$dir${{ matrix.os == 'windows-latest' && ';' || ':' }}$dir")
+          fi
+        done
+        ARGS+=("$MAIN_PY_FILE")
+        pyinstaller "${ARGS[@]}"
+      working-directory: ./
+
+    - name: Create Artifact (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-executables
+        path: dist/
+
+    - name: Create Artifact (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-executables
+        path: dist/
+
+    - name: Create Artifact (macOS)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-executables
+        path: dist/
+
+    - name: List files in dist folder
+      shell: bash
+      run: ls -R ./dist/
