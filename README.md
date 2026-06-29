@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.1.0**
+**Current version: v0.1.4c**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -7,17 +7,36 @@ Multi-purpose tool for visualising the applications of linear algebra, such as i
 As all of the libraries that this tool uses are licensed under GPLv3 (or more permissive licenses), this tool is also licensed under GPLv3.
 
 # Python Libraries required
-- Numpy
-- OpenCV-Python (only from v0.1.1a onwards)
+- NumPy
+- OpenCV-Python
+- PyMongo
 - PyOpenGL
-- PyQt6
+- PyQt6 (NOT PySide6)
+- qimage2ndarray
+- SciPy
 
 ## What to expect for the next update
-Next version: v0.1.1a - will include basic image processing features.
+Next version: v0.2.0a - Merged to main branch
+
+# 2D Image Processing
+
+Features: Import images as you please and move them around the canvas. Perform a simple colour filter based on your desired tint, or apply convolutions (Blur, Sharpen, Edge detection (Sobel operator)). The same operation can be applied to multiple images at a time for better efficiency.
+
+Desktop App Controls (Moving Images):
+- WASD or Left Click and Drag to move the selected images around the canvas.
+- Right Click and Drag up or down to resize the image preview. There is also an option to re-render the image at the upscaled resolution.
+- Z to move the image to the last position. (This is independent of undoing filters or convolutions.)
+- H to flip the image horizontally, V to flip the image vertically.
+
+**Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active image(s). All other features are tied to the currently active image(s).
 
 # 3D Visualiser
 
 Features: Have fun applying transformations to cubes and regular tetrahedra. The last position of an object before a transformation is shown as a translucent object, and the lines of vertex-wise translation and the line or plane of reflection (where applicable) is shown. The matrix stack for the active object can also be displayed. Any number of previous operations can also be repeated.
+
+You can now also define your very own 3D solids! To do so, you first pass in a CSV to specify a polygon, then use that polygon as a base for a pyramid or prism!
+
+Furthermore, save your work and load it up again later. Note that you will lose access to the undo stack, but all objects will remain in the position you last left them.
 
 Desktop App Controls (Game Camera):
 - WASD to move along the xy-plane.
@@ -36,10 +55,63 @@ Web App Controls (Spherical Coordinates):
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
 
 # Known Bugs
-- (Desktop App) The camera panning code is based on the camera yaw, which does not update accurately when the camera is panned quickly. This may cause the camera to roll inadvertently and eventually mess up WASD movements. The only way to fix this is to middle-click.
-- (Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
+## High Priority
+~~- (2D Image Processing, Desktop App) Images are not garbage collected upon closing the window, which returns to the home screen. This will be fixed by the next update.~~ (Fixed in v0.1.1b)
+## Low Priority
+-  (3D Visualiser, Desktop App) The camera panning code is based on the camera yaw, which does not update accurately when the camera is panned quickly. This may cause the camera to roll inadvertently and eventually mess up WASD movements. The only way to fix this is to middle-click.
+- (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.1.4b -> v0.1.4c
+- Image pixelation ability
+- Custom convolution kernels + low-rank approximation
+- Added tooltips
+- Static assets now use relative paths, in preparation for app building
+
+v0.1.4a -> v0.1.4b
+- Image cropping ability + added intensity sliders for colour filters
+- Ability to save the entire Pixmap instead of separate images
+- Operation stack prototype (subject to change in future)
+- Updated slide deck
+
+v0.1.3c -> v0.1.4a
+- No actual new features to image processing yet, just UI tweaks and image preview resizing ability
+- Placeholder for numerical stability - implemented classical Gaussian Elimination and Gram-Schmidt. To be updated with more features later.
+
+v0.1.3b -> v0.1.3c
+- Bug fixes
+
+v0.1.3a -> v0.1.3b
+- Fully working MongoDB integration. You can now create your own polygons and solids and these will be saved in a localhost MongoDB. This way, you will be able to draw your very own solids onto the canvas anytime.
+- Loading and saving!!! Save your canvas into a JSON file, and load it up again anytime later! Note: These files are the same exact type of file as the sample 3D solid files; Cube and Tetrahedron. **Do not overwrite the sample files or the program may brick!**
+
+v0.1.2b -> v0.1.3a
+- Pass in a CSV representing either (x, y) coordinates or (x, y, z) coordinates, find the best fit polygon in the latter case, and use it as a base for pyramids and prisms. (This single feature took me several hours lol)
+
+v0.1.2a -> v0.1.2b
+- Finally added shearing and custom matrices.
+- Permanent lines or planes drawn by the user can now be deleted.
+- Switched from a class file holding all shapes to a single abstract class file, with geometric objects being represented as JSON files instead.
+- Shapes can also have their size and centre specified before adding.
+- Added interface size configuration file for 3D Visualiser.
+
+v0.1.1b -> v0.1.2a
+- Ability to draw permanent lines or planes that can be shown/hidden (but not yet deleted).
+- 3D objects can also now be shown/hidden, and the active object is highlighted.
+- Reflection, rotation and projection can now be done with permanent lines or planes, or still allow the user to input a one-time line or plane.
+- When choosing an existing line or plane for a transformation, it will be highlighted.
+- After a transformation, the respective line or plane will be distinguished by being coloured yellow or blue respectively.
+- Tooltips and icons showing what each operation does.
+
+v0.1.1a -> v0.1.1b
+- Fixed garbage collection.
+- Ability to show or hide images.
+- User is now prompted to choose a save directory, instead of being the same one as the input directory.
+
+v0.1.0a -> v0.1.1a
+- Added basic image processing features to the desktop app, including colour tint filters, median and Gaussian blur, and Sobel edge detection.
+- Closing the 2D image processing or 3D graphics sandbox now returns to the home screen instead of terminating the program.
+
 v0.0.3c -> v0.1.0a
 - Merged Desktop App v0.0.3c and Web App to the main branch.
 

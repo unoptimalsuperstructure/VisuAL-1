@@ -1,21 +1,27 @@
-def toString(lst):
+def toString(lst, acc):
     maxLen = 0
     for i in lst:
         for j in i:
-            x = str(abs(round(j - int(j), 3)))
-            extra_zeros = 5 - len(x)
-            if len(str(abs(round(j, 3)))) + extra_zeros > maxLen:
-                maxLen = len(str(abs(round(j, 3)))) + extra_zeros
+            x = str(abs(round(j - int(j), acc)))
+            extra_zeros = acc + 2 - len(x)
+            if len(str(abs(round(j, acc)))) + extra_zeros > maxLen:
+                maxLen = len(str(abs(round(j, acc)))) + extra_zeros
     newList = []
     for line in lst:
         newLine = []
         for entry in line:
-            entry2 = str(abs(round((entry) - int(entry), 3)))
-            extra_zeros = 5 - len(entry2)
-            extra_spaces = maxLen - len(str(abs(round(entry, 3)))) - extra_zeros
-            final = extra_spaces * " " + str(abs(round(entry, 3)))
-            if extra_zeros == 4:
-                final += ".000"
+            entry2 = str(abs(round((entry) - int(entry), acc)))
+            extra_zeros = acc + 2 - len(entry2)
+            extra_spaces = maxLen - len(str(abs(round(entry, acc)))) - extra_zeros
+            val = abs(round(entry, acc))
+            if val > 0.0001:
+                val = str(val)
+            else:
+                val = f"{val:.{acc}f}"
+                extra_zeros = 0
+            final = extra_spaces * " " + val
+            if extra_zeros == acc + 1:
+                final += "." + "0" * acc
             else:
                 final += extra_zeros * "0"
             if entry >= 0:
@@ -41,3 +47,29 @@ def concat(lst):
                 a[i] = [line]
             i += 1
     return(str(a).replace("[[[", "[").replace("]]]", "]").replace("[[", "[").replace("]], ", "]\n").replace(",", "").replace("'", ""))
+
+def displayAsMatrix(matrix: list, aug: bool):
+    res = ""
+    i = 0
+    for line in matrix:
+        string = "["
+        j = 0
+        for entry in line:
+            string += entry
+            j += 1
+            string += " " if j < len(line) - 1 else (" | " if aug else " ") if j == len(line) - 1 else "]"
+        res += string
+        i += 1
+        res += "\n" if i < len(matrix) else ""
+    return res
+
+def displayAsBasis(matrix: list):
+    res = ""
+    for i in range(len(matrix[0])):
+        string = "["
+        for j in range(len(matrix)):
+            string += matrix[j][i]
+            string += "] [" if j < len(matrix) - 1 else "]"
+        res += string
+        res += "\n" if i < len(matrix[0]) - 1 else ""
+    return res
