@@ -13,7 +13,7 @@ As all of the libraries that this tool uses are licensed under GPLv3 (or more pe
 - PyOpenGL
 - PyQt6 (NOT PySide6)
 - qimage2ndarray
-- SciPy
+- SymPy
 
 ## What to expect for the next update
 Next version: v0.2.0a - Merged to main branch
