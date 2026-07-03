@@ -51,16 +51,51 @@ class NumStabilitySidePanel(QGridLayout):
         randomDataButton = QPushButton("Generate random data...")
         actionButton = QPushButton("Action...")
         actionButton.clicked.connect(self.actionWindow)
+        resetButton = QPushButton("Reset")
+        resetButton.clicked.connect(self.reset)
 
         self.addWidget(addDataButton)
         self.addWidget(randomDataButton)
         self.addWidget(actionButton)
+        self.addWidget(resetButton)
     
     def setDisplayAcc(self, x):
         self.displayAcc = int(x)
     
     def setCalculationAcc(self, x):
         self.calculationAcc = int(x)
+    
+    def reset(self):
+        if self.matrix:
+            try:
+                self.viewer.layout.removeWidget(self.displayMatrix)
+            except:
+                pass
+            self.calculationAccWheel.setEnabled(True)
+            self.asMatrix = True
+            self.augcol = 0
+            disp = displayAsMatrix(toString(self.matrix, self.displayAcc), 0)
+            self.displayMatrix = QLabel(disp)
+            self.displayMatrix.setStyleSheet("font-family: Cascadia Mono")
+
+            self.page = 0
+            self.last = 0
+
+            self.viewer.layout.addWidget(self.displayMatrix)
+            try:
+                self.viewer.layout.removeWidget(self.op)
+                self.viewer.layout.removeWidget(self.pageView)
+                self.viewer.layout.removeWidget(self.soln)
+            except:
+                pass
+            
+            self.op = QLabel()
+            self.viewer.layout.addWidget(self.op)
+            self.pageView = self.pageLoader()
+            self.viewer.layout.addWidget(self.pageView)
+
+            self.soln = QLabel()
+            self.viewer.layout.addWidget(self.soln)
 
     def loadCSV(self):
         file_path = QFileDialog.getOpenFileName(
@@ -173,32 +208,39 @@ class NumStabilitySidePanel(QGridLayout):
         return displayAsMatrix(string, self.augcol) if self.asMatrix else displayAsBasis(string)
     
     def action(self, params):
-        num, stability = params
+        val = params[0]
         if self.matrix is None:
             return
         self.calculationAccWheel.setDisabled(True)
-        if num == 1:
+        if val == 1:
+            pivot, enableLU = params[1:]
             self.augcol = 1
             self.asMatrix = True
-            final, self.hist = GaussianEliminate(self.matrix.copy(), stability)
+            final, self.hist = GaussianEliminate(self.matrix.copy(), pivot, enableLU)
             self.soln.setStyleSheet("color: black; font-family: Cascadia Mono")
-            lst = GaussianSolve(final, stability)
-            if isinstance(lst, list):
-                for i in range(len(lst)):
-                    lst[i] = f"x{i}: {lst[i].evalf(3)}"
-                self.soln.setText(str(lst)[1:-1].replace("'",""))
+            if enableLU:
+                lst = list(map(lambda lst: lst[2:], self.hist))
+                print(lst[-1][1])
+                print(lst[-1][0] @ lst[-1][1] @ final)
             else:
-                self.soln.setText(lst)
+                lst = GaussianSolve(final, pivot, enableLU)
+                if isinstance(lst, list):
+                    for i in range(len(lst)):
+                        lst[i] = f"x{i}: {lst[i].evalf(3)}"
+                    self.soln.setText(str(lst)[1:-1].replace("'",""))
+                else:
+                    self.soln.setText(lst)
             self.page = 0
             self.last = len(self.hist) - 1
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
             self.pageLabel.setText(f"Page 1 of {self.last + 1}")
             self.op.setText(self.hist[0][1])
-        elif num == 2:
+        elif val == 2:
+            modified, normed = params[1:]
             self.asMatrix = False
-            self.hist, norm = GramSchmidtOrth(self.matrix.copy(), stability, self.calculationAcc)
-            statusColour = (lambda x: "black" if norm is None else "green" if norm < 10 ** -12 else "orange" if norm < 10 ** -8 else "red")(norm)
-            statusText = (lambda x: "N/A" if norm is None else "Good" if norm < 10 ** -12 else "Fair" if norm < 10 ** -8 else "Poor")(norm)
+            self.hist, norm = GramSchmidtOrth(self.matrix.copy(), modified, normed, self.calculationAcc)
+            statusColour = "black" if norm is None else "green" if norm < 10 ** -12 else "orange" if norm < 10 ** -8 else "red"
+            statusText = "N/A" if norm is None else "Good" if norm < 10 ** -12 else "Fair" if norm < 10 ** -8 else "Poor"
             self.soln.setText(f"Orthogonality Error (Frobenius norm): {norm} ({statusText})")
             self.soln.setStyleSheet(f"color: {statusColour}; font-family: Cascadia Mono")
             self.page = 0

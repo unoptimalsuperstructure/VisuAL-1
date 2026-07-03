@@ -6,14 +6,17 @@ from PyQt6.QtGui import QPixmap
 
 #np.set_printoptions(suppress=True)
 
-def GaussianEliminate(mat: np.array, pivot: bool):
+def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
     global hist
     global norm
     if mat.dtype != 'float64':
         mat = np.float64(mat)
     hist = [[mat.copy(), ""]]
+    if enableLU:
+        hist[0].append(np.eye(mat.shape[0]))
+        hist[0].append(np.eye(mat.shape[0]))
     norm = np.linalg.norm(mat, np.inf)
-    def helper(mat: np.array, top: np.array):
+    def helper(mat: np.array, top: np.array, size: int):
         global hist
         i = 0
         while i < mat.shape[1]:
@@ -37,8 +40,24 @@ def GaussianEliminate(mat: np.array, pivot: bool):
                 if top is not None:
                     x = top.shape[0] if top.shape[0] != top.size else 1
                     hist.append([np.block([[top], [mat]]), f"R{x + 1} <-> R{swap + x + 1}"])
+                    if enableLU:
+                        elementary = np.eye(size)
+                        tempRow = elementary[x].copy()
+                        elementary[x] = elementary[swap + x]
+                        elementary[swap + x] = tempRow
+                        hist[-1].append(elementary @ hist[-2][2])
+                        hist[-1].append(hist[-2][3])
                 else:
                     hist.append([mat.copy(), f"R1 <-> R{swap + 1}"])
+                    if enableLU:
+                        elementary = np.eye(size)
+                        tempRow = elementary[0].copy()
+                        elementary[0] = elementary[swap]
+                        elementary[swap] = tempRow
+                        hist[-1].append(elementary @ hist[-2][2])
+                        hist[-1].append(hist[-2][3])
+            elif enableLU:
+                hist[-1].append(np.eye(size))
         for k in range(1, mat.shape[0]):
             coeff = mat[k,i]/mat[0,i]
             mat[k] -= coeff * mat[0]
@@ -49,14 +68,24 @@ def GaussianEliminate(mat: np.array, pivot: bool):
             if top is not None:
                 x = top.shape[0] if top.shape[0] != top.size else 1
                 hist.append([np.block([[top], [mat]]), f"R{k + x + 1} {"-" if val >= 0 else "+"} {abs(val)}R{x + 1}"])
+                if enableLU:
+                    elementary = np.eye(size)
+                    elementary[k + x][x] = -val
+                    hist[-1].append(hist[-2][2])
+                    hist[-1].append(hist[-2][3] @ elementary)
             else:
                 hist.append([mat.copy(), f"R{k + 1} {"-" if val >= 0 else "+"} {abs(val)}R1"])
+                if enableLU:
+                    elementary = np.eye(size)
+                    elementary[k][0] = -val
+                    hist[-1].append(hist[-2][2])
+                    hist[-1].append(hist[-2][3] @ elementary)
         if mat.shape[0] == 1:
             return mat
         else:
             top = np.block([[top], [mat[0]]]) if top is not None else mat[0]
-            return np.block([[mat[0]], [helper(mat[1:], top)]])
-    return helper(mat, None), hist
+            return np.block([[mat[0]], [helper(mat[1:], top, size)]])
+    return helper(mat, None, mat.shape[0]), hist
 
 def findPivots(mat: np.array, lst: list):
     nonzeros = mat[0].nonzero()[0] if mat.size != 0 else np.array([])
@@ -70,8 +99,8 @@ def findPivots(mat: np.array, lst: list):
         lst.append(int(nonzeros[0]))
         return findPivots(mat[1:], lst)
 
-def GaussianSolve(mat: np.array, pivot: bool):
-    mat = GaussianEliminate(mat, pivot)[0]
+def GaussianSolve(mat: np.array, pivot: bool, enableLU: bool):
+    mat = GaussianEliminate(mat, pivot, enableLU)[0]
     pivots, nonpivots = findPivots(mat, [])
     if mat.shape[1] - 1 in pivots:
         return "No solution"
@@ -107,7 +136,7 @@ def proj(u: np.array, v: np.array, acc: int): # Projection of u onto v
     temp = round(np.dot(u, v), acc)
     return np.round(v * temp/(np.linalg.norm(v) ** 2), acc) if np.linalg.norm(v) >= 10 ** -(acc - 1) else None
 
-def GramSchmidtOrth(mat: np.array, modified: bool, acc: int):
+def GramSchmidtOrth(mat: np.array, modified: bool, normed: bool, acc: int):
     if mat.dtype != 'float64':
         mat = np.float64(mat)
     if np.linalg.norm(mat[0]) < 10 ** -acc:
@@ -140,7 +169,10 @@ def GramSchmidtOrth(mat: np.array, modified: bool, acc: int):
         if np.linalg.norm(mat[i]) < 10 ** -(acc - 1):
             hist[-1][1] += "\nLinear dependence encountered; process terminated"
             return hist, None
-    hist[-1][1] += "\nOrthogonalisation complete!"
     for i in range(mat.shape[0]):
         mat[i] /= np.linalg.norm(mat[i])
+        mat[i] = np.round(mat[i], acc)
+        if normed:
+            hist.append([mat.copy(), f"Normalise vector {i + 1}"])
+    hist[-1][1] += "\nOrthogonalisation complete!"
     return hist, np.linalg.norm(mat @ mat.T - np.eye(mat.shape[0]))
