@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.2.0a**
+**Current version: v0.2.0b1**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -59,6 +59,11 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.2.0a -> v0.2.0b1
+- Fixed matrix aliasing bug
+- Added reset button so that the DP for calculations can be tweaked without reloading the CSV
+- Added colour space rotation and low-rank approximation of full images
+
 v0.2.0a
 - Added GEPP, MGS and orthogonality error measured using Frobenius norm.
 
