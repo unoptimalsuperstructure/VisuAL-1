@@ -63,3 +63,21 @@ function moveLayerOp(from, to) {
   refreshStepsList();
   renderFrame();
 }
+
+function moveLayerUp() {
+  const idx = IMG.layers.findIndex(l => l.id === IMG.activeId);
+  if (idx < IMG.layers.length - 1) {
+    [IMG.layers[idx], IMG.layers[idx+1]] = [IMG.layers[idx+1], IMG.layers[idx]];
+    refreshLayerList();
+    renderFrame();
+  }
+}
+
+function moveLayerDown() {
+  const idx = IMG.layers.findIndex(l => l.id === IMG.activeId);
+  if (idx > 0) {
+    [IMG.layers[idx], IMG.layers[idx-1]] = [IMG.layers[idx-1], IMG.layers[idx]];
+    refreshLayerList();
+    renderFrame();
+  }
+}

@@ -7,7 +7,7 @@ function buildPointCloud() {
   const positions = new Float32Array(n * 3);
   const colors    = new Float32Array(n * 3);
 
-  // Colour if catagorical is selected
+  // color if catagorical is selected
   DATA.catColors = new Map();
   if (DATA.cats) {
     let ci = 0;
@@ -34,6 +34,10 @@ function buildPointCloud() {
   scene.add(DATA.cloud);
 
   renderLegend();
+}
+
+function clearCloud() {
+  if (DATA.cloud) { scene.remove(DATA.cloud); DATA.cloud = null; }
 }
 
 function toggleFitLine() {
@@ -69,6 +73,7 @@ const SVD_STEPS = [
 
 function startSVD() {
   if (!DATA.pts.length) return;
+  if (typeof stopPCA === 'function') stopPCA();
 
   const { values, vectors } = eigSymmetric3(covariance());
   const sv = values.map(v => STD_SCALE * Math.sqrt(Math.max(0, v)));
@@ -164,6 +169,100 @@ function svdGoto(target) {
   d.raf = requestAnimationFrame(tick);
 }
 
+
+const PCA_STEPS = [
+  { dim: 3, label: '0 · Full data (3-D)',
+    why: 'Nothing dropped yet — the projection is the identity.' },
+  { dim: 2, label: '1 · Project onto top 2 PCs — plane (2-D)',
+    why: 'P₂ = V₂V₂ᵀ flattens each point onto the best-fit plane: the one ' +
+         'that keeps the most variance.' },
+  { dim: 1, label: '2 · Project onto top PC — line (1-D)',
+    why: 'P₁ = v₁v₁ᵀ collapses the cloud onto the single direction of ' +
+         'greatest variance — the same line as the orthogonal fit.' },
+  { dim: 0, label: '3 · Collapse to the centroid (0-D)',
+    why: 'P₀ = 0 sends every point to the mean. All variance is gone; ' +
+         'the retained fraction is 0.' },
+];
+ 
+function startPCA() {
+  if (!DATA.pts.length) return;
+  stopSVD();
+ 
+  const { values, vectors: V } = eigSymmetric3(covariance());
+  const total = values.reduce((a, b) => a + Math.max(0, b), 0) || 1;
+ 
+  const projs = [];
+  for (let k = 3; k >= 0; k--) {
+    const P = new Array(9).fill(0);
+    for (let i = 0; i < 3; i++)
+      for (let j = 0; j < 3; j++)
+        for (let c = 0; c < k; c++)
+          P[i*3 + j] += V[i*3 + c] * V[j*3 + c];
+    projs.push(P);
+  }
+  const retained = [3, 2, 1, 0].map(k =>
+    values.slice(0, k).reduce((a, b) => a + Math.max(0, b), 0) / total);
+ 
+  DATA.pca = { projs, retained, step: 0, anim: null, raf: 0 };
+  document.getElementById('pca-panel').style.display = 'block';
+  document.getElementById('btn-pca').textContent = 'Stop PCA';
+  applyPCAProjection(projs[0]);
+  renderPCAStep();
+}
+ 
+function stopPCA() {
+  if (!DATA.pca) return;
+  cancelAnimationFrame(DATA.pca.raf);
+  DATA.pca = null;
+  restoreCloudPositions();
+  document.getElementById('pca-panel').style.display = 'none';
+  document.getElementById('btn-pca').textContent = 'Step-by-step PCA';
+}
+ 
+function applyPCAProjection(P) {
+  if (!DATA.cloud) return;
+  const attr = DATA.cloud.geometry.getAttribute('position');
+  for (let i = 0; i < DATA.pts.length; i++) {
+    const [x, y, z] = DATA.pts[i];
+    attr.setXYZ(i,
+      P[0]*x + P[1]*y + P[2]*z,
+      P[3]*x + P[4]*y + P[5]*z,
+      P[6]*x + P[7]*y + P[8]*z);
+  }
+  attr.needsUpdate = true;
+}
+ 
+function restoreCloudPositions() {
+  applyPCAProjection(identity3());
+}
+ 
+function pcaGoto(target) {
+  const d = DATA.pca;
+  if (!d || d.anim) return;
+  target = Math.max(0, Math.min(3, target));
+  if (target === d.step) return;
+ 
+  if (Math.abs(target - d.step) > 1) {
+    d.step = target;
+    applyPCAProjection(d.projs[target]);
+    renderPCAStep();
+    return;
+  }
+ 
+  const A = d.projs[d.step], B = d.projs[target];
+  const start = performance.now(), dur = 600;
+  d.anim = true;
+  const tick = now => {
+    const u = Math.min(1, (now - start) / dur);
+    const t = easeInOut(u);
+    const P = A.map((a, i) => a + (B[i] - a) * t);
+    applyPCAProjection(P);
+    if (u < 1) { d.raf = requestAnimationFrame(tick); }
+    else { d.anim = null; d.step = target; applyPCAProjection(B); renderPCAStep(); }
+  };
+  d.raf = requestAnimationFrame(tick);
+}
+
 function setGlyphMatrix(group, m) {
   group.matrix.copy(m);
   group.updateMatrixWorld(true);
@@ -181,3 +280,10 @@ function mat4From3(m) {
 function m4FromMul(A, B) { return new THREE.Matrix4().multiplyMatrices(A, B); }
 function quatFromMat4(m) { return new THREE.Quaternion().setFromRotationMatrix(m); }
 function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2; }
+
+function clearAnalysis() {
+  if (DATA.fitLine) { scene.remove(DATA.fitLine); DATA.fitLine.geometry.dispose(); DATA.fitLine = null; }
+  stopSVD();
+  if (typeof stopPCA === 'function') stopPCA();
+}
+ 

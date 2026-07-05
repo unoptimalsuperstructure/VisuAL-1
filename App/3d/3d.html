@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>VisuAL-1 3d view</title>
-  <link rel="stylesheet" href="../BaseStyle.css"/>
+<title>3d viewport</title>
+  <link rel="stylesheet" href="../Shared/BaseStyle.css"/>
   <link rel="stylesheet" href="3d.css"/>
+  <link rel="stylesheet" href="../Shared/tooltip.css"/>
 </head>
 <body>
 
 <div id="topbar">
   <div class="logo">VisuAL-1</div>
-  <div class="version">Milestone 2</div>
+  <div class="version">Milestone 3</div>
   <div class="spacer"></div>
   <a class="topbar-back" href="../Home.html">← Home</a>
-  <!-- Maybe log in button? -->
 </div>
 
 <div id="main">
@@ -54,6 +54,21 @@
         <button class="btn" onclick="openModal('rotate')">
           Rotate
         </button>
+        <button class="btn" data-tip="Flatten onto a plane: det = 0, idempotent, and irreversible." onclick="openModal('project')">
+          Project onto Plane
+        </button>
+        <button class="btn" data-tip="Grow or shrink about the object's centre; volume scales by c³." onclick="openModal('scale')">
+          Scale
+        </button>
+        <button class="btn" data-tip="Slide layers parallel to a direction; det = 1, so volume is unchanged." onclick="openModal('shear')">
+          Shear
+        </button>
+        <button class="btn" data-tip="Type any 3×3 matrix — its columns are where i, j, k land." onclick="openModal('custom')">
+          Custom Matrix
+        </button>
+        <button class="btn" data-tip="Re-apply the last n transformations — composition is just the product of their matrices." onclick="openModal('repeat')">
+          Repeat…
+        </button>
         <button class="btn" onclick="undoLast()">
           Undo
         </button>
@@ -73,36 +88,15 @@
       </div>
     </div>
 
-    <!-- ── Data Engineering ── -->
+    <!-- ── Lines & Planes library ── -->
     <div class="section">
-      <div class="section-head" id="shead-data" onclick="toggleSection('data')">
-        Data Engineering
+      <div class="section-head" id="shead-lp" onclick="toggleSection('lp')">
+        Lines &amp; Planes
       </div>
-      <div class="section-body" id="section-data">
-        <label class="btn" for="csv-input"><span class="btn-icon">＋</span> Load CSV…</label>
-        <input type="file" id="csv-input" accept=".csv,text/csv" hidden/>
-        <div id="data-summary" style="font-size:11px;color:var(--muted);margin:6px 0"></div>
-
-        <div id="data-analysis" style="display:none">
-          <button class="btn" id="btn-change-cols">Change columns</button>
-          <div class="section-label">Analysis</div>
-          <button class="btn" id="btn-fit-line">Line of best fit</button>
-          <button class="btn" id="btn-svd">Step-by-step SVD</button>
-          <button class="btn" id="btn-pca" disabled title="Coming soon">Step-by-step PCA (soon)</button>
-          <button class="btn danger" id="btn-clear-data">Clear data</button>
-          <div id="data-legend"></div>
-
-          <div id="svd-panel" style="display:none">
-            <div class="section-label" style="margin-top:10px">SVD&nbsp;&nbsp;M = U Σ Vᵀ</div>
-            <div id="svd-step-label" class="svd-step-label"></div>
-            <div style="display:flex;gap:6px">
-              <button class="btn" id="btn-svd-prev">‹ Prev</button>
-              <button class="btn" id="btn-svd-next">Next ›</button>
-            </div>
-            <button class="btn" id="btn-svd-reset" style="margin-top:4px">Reset to sphere</button>
-            <pre id="svd-matrix" class="matrix"></pre>
-          </div>
-        </div>
+      <div class="section-body" id="section-lp">
+        <button class="btn" data-tip="Save a line r = a + t·d; pick it later inside Reflect, Rotate and Shear." onclick="openModal('addLine')">＋ Add Line</button>
+        <button class="btn" data-tip="Save a plane ax + by + cz = d; pick it later inside Reflect and Project." onclick="openModal('addPlane')">＋ Add Plane</button>
+        <div id="lp-list"></div>
       </div>
     </div>
 
@@ -136,12 +130,11 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="matrix.js"></script>
+<script src="../Shared/matrix.js"></script>
+<script src="../Shared/PrintMatrix.js"></script>
+<script src="../Shared/viewport.js"></script>
 <script src="scene.js"></script>
 <script src="ui.js"></script>
 <script src="render.js"></script>
-<script src="DataEngineering/data.js"></script>
-<script src="DataEngineering/scene.js"></script>
-<script src="DataEngineering/ui.js"></script>
 </body>
 </html>

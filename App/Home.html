@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <title>VisuAL-1</title>
-<link rel="stylesheet" href="BaseStyle.css" />
+<link rel="stylesheet" href="Shared/BaseStyle.css" />
 <link rel="stylesheet" href="Home.css"/>
 </head>
 <body>
 
 <div id="topbar">
   <div class="logo">VisuAL-1</div>
-  <div class="version">Milestone 2</div>
+  <div class="version">Milestone 3</div>
   <div class="spacer"></div>
   <!-- Maybe log in button? -->
 </div>
@@ -34,6 +34,11 @@
     <div class="tool-card" id="card-image" onclick="openTool('image')">
       <div class="tool-card-name">Image Processing</div>
       <div class="tool-card-sub">Application of filters on images</div>
+    </div>
+
+    <div class="tool-card" id="card-data" onclick="openTool('data')">
+      <div class="tool-card-name">Data Engineering</div>
+      <div class="tool-card-sub">Best fit line, SVD &amp; PCA</div>
     </div>
 
   </div>
@@ -75,7 +80,14 @@ const TOOLS = {
           'Supports multiple layers and undo functionality.',
     href: './ImageProcess/image.html',
   },
-};
+  data: {
+  name: 'Data Engineering',
+  desc: 'Load a CSV, choose three column data to be the X, Y and Z axis, and plot the rows ' +
+        'as a 3D point. Fit a line, or walk through the SVD / PCA of the ' +
+        'data\'s covariance shape, step by step.',
+  href: './DataEngineering/data.html',
+  },
+};   
 
 let activeTool = null;
 

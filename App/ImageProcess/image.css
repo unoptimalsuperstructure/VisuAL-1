@@ -42,9 +42,9 @@
   min-height: 24px;
 }
 
-/* ── Colour Modal ────────────────────────────────────────────── */
+/* ── color Modal ────────────────────────────────────────────── */
 
-.colour-modal {
+.color-modal {
   width: 380px;
 }
 
@@ -70,7 +70,7 @@
   accent-color: var(--accent);
 }
 
-/* ── Colour filter sliders ──────────────────────────────────────── */
+/* ── color filter sliders ──────────────────────────────────────── */
 
 .slider-row {
   display: flex;

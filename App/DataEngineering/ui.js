@@ -1,5 +1,17 @@
 'use strict';
 
+const sectionOpen = { data: true };
+ 
+function toggleSection(id) {
+  sectionOpen[id] = !sectionOpen[id];
+  const body = document.getElementById('section-' + id);
+  const head = document.getElementById('shead-' + id);
+  if (body) body.style.display = sectionOpen[id] ? 'block' : 'none';
+  if (head) head.classList.toggle('collapsed', !sectionOpen[id]);
+}
+
+// Col Modal ────────────────────────────────────────────── 
+
 function onCSVChosen(file) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -29,12 +41,12 @@ function buildColumnModal() {
     <div class="modal">
       <h3>Map CSV Columns</h3>
       <div class="desc">Choose three numeric columns for the X, Y and Z axes,
-        and, optionally, a column to colour points by category.</div>
+        and, optionally, a column to color points by category.</div>
 
       <div class="field-row"><label style="width:auto;min-width:64px">X axis</label><select id="de-x" class="de-select"></select></div>
       <div class="field-row"><label style="width:auto;min-width:64px">Y axis</label><select id="de-y" class="de-select"></select></div>
       <div class="field-row"><label style="width:auto;min-width:64px">Z axis</label><select id="de-z" class="de-select"></select></div>
-      <div class="field-row"><label style="width:auto;min-width:64px">Colour</label><select id="de-cat" class="de-select"></select></div>
+      <div class="field-row"><label style="width:auto;min-width:64px">color</label><select id="de-cat" class="de-select"></select></div>
 
       <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin-top:8px">
         <input type="checkbox" id="de-standardise" checked/> Standardise each axis (z-score)
@@ -112,8 +124,10 @@ function applyColumnModal() {
   document.getElementById('data-analysis').style.display = 'block';
   document.getElementById('data-summary').textContent =
     `${DATA.pts.length} points · axes: ${DATA.headers[cx]}, ${DATA.headers[cy]}, ${DATA.headers[cz]}`
-    + (cc >= 0 ? ` · coloured by ${DATA.headers[cc]}` : '');
+    + (cc >= 0 ? ` · colored by ${DATA.headers[cc]}` : '');
 }
+
+// Legend ────────────────────────────────────────────── 
 
 let legendOpen = true;
 
@@ -156,6 +170,19 @@ function renderSVDStep() {
   document.getElementById('svd-matrix').textContent = caption + ' =\n' + fmtMat3(mat);
 }
 
+function renderPCAStep() {
+  const d = DATA.pca; if (!d) return;
+  const st = PCA_STEPS[d.step];
+  document.getElementById('pca-step-label').textContent = st.label;
+  const why = document.getElementById('pca-step-why');
+  if (why) why.textContent = st.why;
+  const rv = document.getElementById('pca-retained');
+  if (rv) rv.textContent =
+    'Variance retained: ' + (d.retained[d.step] * 100).toFixed(1) + '%';
+  document.getElementById('pca-matrix').textContent =
+    'P =\n' + fmtMat3(d.projs[d.step]);
+}
+
 function fmtMat3(m) {
   const f = v => (v >= 0 ? ' ' : '-') + Math.abs(v).toFixed(3);
   let out = '';
@@ -165,11 +192,6 @@ function fmtMat3(m) {
 }
 
 // Reset/clear analysis/data ────────────────────────────────────────────── 
-
-function clearAnalysis() {
-  if (DATA.fitLine) { scene.remove(DATA.fitLine); DATA.fitLine.geometry.dispose(); DATA.fitLine = null; }
-  stopSVD();
-}
 
 function clearData() {
   clearAnalysis();
@@ -199,6 +221,10 @@ function initDataEngineering() {
     if (DATA.cloud) DATA.cloud.visible = !hide.checked;
   });
   bind('btn-svd',      () => { DATA.svd ? stopSVD() : startSVD(); });
+  bind('btn-pca',      () => { DATA.pca ? stopPCA() : startPCA(); });
+  bind('btn-pca-next', () => pcaGoto((DATA.pca?.step ?? 0) + 1));
+  bind('btn-pca-prev', () => pcaGoto((DATA.pca?.step ?? 0) - 1));
+  bind('btn-pca-reset',() => pcaGoto(0));
   bind('btn-clear-data', clearData);
   bind('btn-svd-next', () => svdGoto((DATA.svd?.step ?? 0) + 1));
   bind('btn-svd-prev', () => svdGoto((DATA.svd?.step ?? 0) - 1));

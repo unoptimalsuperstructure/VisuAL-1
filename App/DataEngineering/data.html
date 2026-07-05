@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Data Engineering</title>
+  <link rel="stylesheet" href="../Shared/BaseStyle.css"/>
+  <link rel="stylesheet" href="data.css"/>
+  <link rel="stylesheet" href="../Shared/tooltip.css"/>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">Milestone 3</div>
+  <div class="spacer"></div>
+  <a class="topbar-back" href="../Home.html">← Home</a>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+
+    <div class="section">
+      <div class="section-head" id="shead-data" onclick="toggleSection('data')">
+        Data Engineering
+      </div>
+      <div class="section-body" id="section-data">
+        <label class="btn" for="csv-input"><span class="btn-icon">＋</span> Load CSV…</label>
+        <input type="file" id="csv-input" accept=".csv,text/csv" hidden/>
+        <div id="data-summary" style="font-size:11px;color:var(--muted);margin:6px 0"></div>
+
+        <div id="data-analysis" style="display:none">
+          <button class="btn" id="btn-change-cols">Change columns…</button>
+          <div class="section-label">Analysis</div>
+          <button class="btn" id="btn-fit-line" data-tip="Orthogonal (total least squares) fit: through the centroid, along the covariance's dominant eigenvector — minimising perpendicular distances.">Line of best fit</button>
+          <button class="btn" id="btn-svd" data-tip="Factor the data's covariance shape as M = U Σ Vᵀ and watch a unit sphere become the data ellipsoid: rotate, stretch, rotate.">Step-by-step SVD</button>
+          <button class="btn" id="btn-pca" data-tip="Flatten the cloud one dimension at a time — 3D → plane → line → point — by projecting onto the top principal components.">Step-by-step PCA</button>
+          <button class="btn danger" id="btn-clear-data">Clear data</button>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin:6px 0">
+            <input type="checkbox" id="chk-hide-data"/> Hide data points
+          </label>
+          <div id="data-legend"></div>
+
+          <div id="svd-panel" style="display:none">
+            <div class="section-label" style="margin-top:10px">SVD&nbsp;&nbsp;M = U Σ Vᵀ</div>
+            <div id="svd-step-label" class="svd-step-label"></div>
+            <div id="svd-step-why" class="svd-step-why"></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn" id="btn-svd-prev">‹ Prev</button>
+              <button class="btn" id="btn-svd-next">Next ›</button>
+            </div>
+            <button class="btn" id="btn-svd-reset" style="margin-top:4px">Reset to sphere</button>
+            <pre id="svd-matrix" class="matrix"></pre>
+          </div>
+
+          <div id="pca-panel" style="display:none">
+            <div class="section-label" style="margin-top:10px">PCA&nbsp;&nbsp;flatten by projection</div>
+            <div id="pca-step-label" class="svd-step-label"></div>
+            <div id="pca-step-why" class="svd-step-why"></div>
+            <div id="pca-retained" style="font-size:11px;color:var(--text);margin:2px 0 6px"></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn" id="btn-pca-prev">‹ Prev</button>
+              <button class="btn" id="btn-pca-next">Next ›</button>
+            </div>
+            <button class="btn" id="btn-pca-reset" style="margin-top:4px">Reset to full data</button>
+            <pre id="pca-matrix" class="matrix"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint-block">
+      <strong>Drag</strong> — orbit the view<br>
+      <strong>Wheel</strong> / <strong>W S</strong> — zoom<br>
+      <strong>A D</strong> / arrows — orbit · <strong>Space Shift</strong> — pitch<br>
+      <strong>Middle-click</strong> — reset camera
+    </div>
+
+  </div>
+
+  <div id="viewport">
+    <canvas id="gl"></canvas>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../Shared/matrix.js"></script>
+<script src="../Shared/tooltip.js"></script>
+<script src="../Shared/viewport.js"></script>
+<script src="data.js"></script>
+<script src="scene.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

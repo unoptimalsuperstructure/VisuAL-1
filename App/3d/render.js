@@ -1,33 +1,3 @@
-const canvas = document.getElementById('gl');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0xf5f5f5);
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 200);
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-dirLight.position.set(5, 5, 8);
-scene.add(dirLight);
-
-function makeAxis(from, to, color) {
-  const geo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(...from),
-    new THREE.Vector3(...to),
-  ]);
-  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color }));
-}
-
-// x and y axis not coloured, might be due to the grid helper since z axis is not affected
-scene.add(makeAxis([-10,0,0], [10,0,0], 0xcc0000));
-scene.add(makeAxis([0,-10,0], [0,10,0], 0x00aa00));
-scene.add(makeAxis([0,0,-10], [0,0,10], 0x0000cc));
-
-const grid = new THREE.GridHelper(20, 20, 0xcccccc, 0xdddddd);
-grid.rotation.x = Math.PI / 2;
-scene.add(grid);
-
 const CUBE_FACES = [[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]];
 const CUBE_EDGES = [[0,1],[0,2],[0,4],[3,1],[3,2],[3,7],[5,1],[5,4],[5,7],[6,2],[6,4],[6,7]];
 const FACE_COLORS = [0x777777, 0x777777, 0x777777, 0x777777, 0x777777, 0x777777];
@@ -254,60 +224,7 @@ function clearTransformVis(objId) {
   removeTransformVis(objId);
 }
 
-let camRadius = 6, camTheta = Math.PI / 4, camPhi = Math.PI / 3;
 
-function resetCamera() {
-  camRadius = 6; camTheta = Math.PI / 4; camPhi = Math.PI / 3;
-  updateCamera();
-}
-
-function updateCamera() {
-  const x = camRadius * Math.sin(camPhi) * Math.cos(camTheta);
-  const y = camRadius * Math.sin(camPhi) * Math.sin(camTheta);
-  const z = camRadius * Math.cos(camPhi);
-  camera.position.set(x, y, z);
-  camera.up.set(0, 0, 1);
-  camera.lookAt(0, 0, 0);
-}
-resetCamera();
-
-let isDragging = false, lastMx = 0, lastMy = 0;
-
-canvas.addEventListener('mousedown', e => {
-  if (e.button === 0) { isDragging = true; lastMx = e.clientX; lastMy = e.clientY; }
-  if (e.button === 1) { e.preventDefault(); resetCamera(); }
-});
-window.addEventListener('mouseup', () => { isDragging = false; });
-window.addEventListener('mousemove', e => {
-  if (!isDragging) return;
-  camTheta -= (e.clientX - lastMx) * 0.006;
-  camPhi = Math.max(0.05, Math.min(Math.PI - 0.05, camPhi + (e.clientY - lastMy) * 0.006));
-  lastMx = e.clientX; lastMy = e.clientY;
-  updateCamera();
-});
-canvas.addEventListener('wheel', e => {
-  camRadius = Math.max(1.5, Math.min(40, camRadius + e.deltaY * 0.01));
-  updateCamera();
-}, { passive: true });
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-const keysDown = new Set();
-window.addEventListener('keydown', e => {
-  if (document.getElementById('modal-bg').style.display !== 'none') return;
-  keysDown.add(e.key.toLowerCase());
-});
-window.addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
-
-function processKeys() {
-  const speed = 0.05;
-  if (keysDown.has('w') || keysDown.has('arrowup')) camRadius = Math.max(1.5, camRadius - speed * 3);
-  if (keysDown.has('s') || keysDown.has('arrowdown')) camRadius = Math.min(40,  camRadius + speed * 3);
-  if (keysDown.has('a') || keysDown.has('arrowleft')) camTheta -= speed * 0.5;
-  if (keysDown.has('d') || keysDown.has('arrowright')) camTheta += speed * 0.5;
-  if (keysDown.has(' ')) camPhi = Math.max(0.05, camPhi - speed * 0.5);
-  if (keysDown.has('shift')) camPhi = Math.min(Math.PI - 0.05, camPhi + speed * 0.5);
-  if (keysDown.size) updateCamera();
-}
 
 const origApplyTransform = SceneObj.prototype.applyTransform;
 SceneObj.prototype.applyTransform = function(mat, name) {
@@ -366,26 +283,62 @@ doConfirm = function() {
   origDoConfirm();
 };
 
-function resizeIfNeeded() {
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width !== w || canvas.height !== h) {
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  processKeys();
-  resizeIfNeeded();
-  objects.forEach(obj => syncMesh(obj));
-  renderer.render(scene, camera);
-}
-
 objects.forEach(obj => {
   obj.shadowVerts = null;
   buildMesh(obj);
 });
 
-animate();
+onFrame = () => {
+  objects.forEach(obj => syncMesh(obj));
+};
+
+
+const lpMeshes = new Map();
+ 
+function syncLinesPlanes() {
+  if (typeof SAVED_LP === 'undefined') return;
+  const live = new Set(SAVED_LP.map(o => o.id));
+  for (const [id, mesh] of lpMeshes)
+    if (!live.has(id)) { scene.remove(mesh); lpMeshes.delete(id); }
+ 
+  for (const o of SAVED_LP) {
+    if (lpMeshes.has(o.id)) continue;
+    let mesh;
+    if (o.kind === 'line') {
+      const { a1, a2, a3, d1, d2, d3 } = o.p;
+      const L = Math.hypot(d1, d2, d3) || 1;
+      const u = [d1 / L, d2 / L, d3 / L], E = 12;
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(a1 - u[0]*E, a2 - u[1]*E, a3 - u[2]*E),
+        new THREE.Vector3(a1 + u[0]*E, a2 + u[1]*E, a3 + u[2]*E),
+      ]);
+      mesh = new THREE.Line(geo,
+        new THREE.LineDashedMaterial({ color: 0x9b59b6, dashSize: 0.25, gapSize: 0.15 }));
+      mesh.computeLineDistances();
+    } else {
+      const { a, b, c, d } = o.p;
+      const n2 = a*a + b*b + c*c || 1;
+      const p0 = [a*d/n2, b*d/n2, c*d/n2];
+      let t = Math.abs(a) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+      let e1 = [b*t[2]-c*t[1], c*t[0]-a*t[2], a*t[1]-b*t[0]];
+      const l1 = Math.hypot(...e1); e1 = e1.map(v => v / l1);
+      let e2 = [b*e1[2]-c*e1[1], c*e1[0]-a*e1[2], a*e1[1]-b*e1[0]];
+      const l2 = Math.hypot(...e2); e2 = e2.map(v => v / l2);
+      const S = 5;
+      const corners = [[+1,+1],[-1,+1],[-1,-1],[+1,-1]].map(([s1,s2]) =>
+        new THREE.Vector3(
+          p0[0] + S*(s1*e1[0] + s2*e2[0]),
+          p0[1] + S*(s1*e1[1] + s2*e2[1]),
+          p0[2] + S*(s1*e1[2] + s2*e2[2])));
+      const geo = new THREE.BufferGeometry().setFromPoints(
+        [corners[0], corners[1], corners[2], corners[0], corners[2], corners[3]]);
+      geo.computeVertexNormals();
+      mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: 0x2ebdbd, transparent: true, opacity: 0.15,
+        side: THREE.DoubleSide, depthWrite: false }));
+    }
+    scene.add(mesh);
+    lpMeshes.set(o.id, mesh);
+  }
+}
+ 

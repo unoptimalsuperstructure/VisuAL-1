@@ -4,15 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Image Processing</title>
-  <link rel="stylesheet" href="../BaseStyle.css"/>
+  <link rel="stylesheet" href="../Shared/BaseStyle.css"/>
   <link rel="stylesheet" href="image.css"/>
+  <link rel="stylesheet" href="../Shared/tooltip.css"/>
 </head>
 <body>
 
 <!-- ─Topbar ────────────────────────────────────────────── -->
 <div id="topbar">
   <div class="logo">VisuAL-1</div>
-  <div class="version">Milestone 2</div>
+  <div class="version">Milestone 3</div>
   <div class="spacer"></div>
   <a class="topbar-back" href="../Home.html">← Home</a>
 </div>
@@ -31,25 +32,32 @@
         <p id="no-layers-msg" style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">
           No images loaded yet.
         </p>
-        <label class="btn" id="btn-add-image" for="file-input" style="margin-top:6px">
+        <div style="display:flex;gap:4px;margin-top:6px">
+          <button class="btn" id="btn-move-up"   title="Move layer up (render on top)">↑ Up</button>
+          <button class="btn" id="btn-move-down"  title="Move layer down (render below)">↓ Down</button>
+        </div>
+        <label class="btn" id="btn-add-image" for="file-input" style="margin-top:4px">
           <span class="btn-icon">＋</span> Add Image…
         </label>
         <input type="file" id="file-input" accept="image/*" multiple hidden/>
       </div>
     </div>
 
-    <!-- ─Filters ────────────────────────────────────────────── -->
+    <!-- Filters -->
     <div class="section">
       <div class="section-head">Filters <span class="chevron">▾</span></div>
       <div class="section-body">
-        <button class="btn" id="btn-colour">
-          <span class="btn-icon"></span> Colour Filter
+        <button class="btn" id="btn-color" data-tip="Color maps are 3×3 matrices acting on each pixel's (R,G,B) vector — grayscale, sepia and channel rotations are all linear maps of color space.">
+          <span class="btn-icon">◐</span> Color Filter
         </button>
-        <button class="btn" id="btn-blur">
-          <span class="btn-icon"></span> Blur
+        <button class="btn" id="btn-blur" data-tip="Blurs and sharpens are convolutions: each output pixel is a weighted sum of its neighbours — one huge, sparse linear operator applied to the whole image.">
+          <span class="btn-icon">◎</span> Blur
         </button>
-        <button class="btn" id="btn-sobel">
-          <span class="btn-icon">⊞</span> Edge Detection
+        <button class="btn" id="btn-sobel" data-tip="Two 3×3 kernels estimate the brightness gradient ∂I/∂x and ∂I/∂y; edge strength is the gradient's magnitude.">
+          <span class="btn-icon">⊞</span> Sobel Edge Detection
+        </button>
+        <button class="btn" id="btn-compress" data-tip="Low-rank approximation: keep only the top-k singular components of each channel — the SVD as an image compressor.">
+          ▦ Compress (SVD)
         </button>
         <button class="btn" id="btn-undo" style="margin-top:6px">
           <span class="btn-icon">↩</span> Undo
@@ -57,7 +65,6 @@
       </div>
     </div>
 
-    <!-- Steps (active layer pipeline) -->
     <div class="section">
       <div class="section-head">Steps <span class="chevron">▾</span></div>
       <div class="section-body">
@@ -83,82 +90,89 @@
 
     <!-- Controls hint ────────────────────────────────────────────── -->
     <div class="hint-block">
-      Click an image in the list to view it<br>
-      Click the canvas to select an image<br>
+      <strong>WASD</strong> — pan selected layer<br>
+      <strong>Drag</strong> — pan selected layer<br>
+      Click a layer row to select it<br>
       Click a step to view that state<br>
       <strong>Drag</strong> a step to reorder · <strong>×</strong> to remove
     </div>
 
-    <!-- Inline warning (fades out) -->
     <div id="sidebar-warning"></div>
 
-  </div><!-- /sidebar -->
+  </div>
 
-  <!-- ─Viewport──────────────────────────────────────────────-->
   <div id="viewport">
     <canvas id="canvas"></canvas>
   </div>
 
-</div><!-- /main -->
+</div>
 
-<!-- ─Colour filter modal ────────────────────────────────────────────── -->
-<div class="modal-bg" id="colour-modal-bg" style="display:none">
-  <div class="modal colour-modal">
-    <h3>Colour Filter</h3>
-    <p class="desc">Apply a colour adjustment or sepia tone to the selected layer.</p>
+<div class="modal-bg" id="color-modal-bg" style="display:none">
+  <div class="modal color-modal">
+    <h3>Color Filter</h3>
+    <p class="desc">Apply a color adjustment or sepia tone to the selected layer.</p>
 
-    <!-- Type selector -->
     <div class="type-row">
-      <label class="type-opt">
-        <input type="radio" name="colour-type" value="colour" checked/>
-        <span>Colour Adjustment</span>
+      <label class="type-opt" data-tip="Scales and offsets each channel: out = diag(r,g,b)·in + offset.">
+        <input type="radio" name="color-type" value="color" checked/>
+        <span>Color Adjustment</span>
       </label>
-      <label class="type-opt">
-        <input type="radio" name="colour-type" value="sepia"/>
+      <label class="type-opt" data-tip="Fixed 3×3 mixing matrix that maps every color toward warm browns.">
+        <input type="radio" name="color-type" value="sepia"/>
         <span>Sepia</span>
+      </label>
+      <label class="type-opt" data-tip="Projects color onto the luma direction 0.2126R + 0.7152G + 0.0722B.">
+        <input type="radio" name="color-type" value="grayscale"/>
+        <span>Grayscale</span>
+      </label>
+      <label class="type-opt" data-tip="Affine map 255 − v per channel, blended by strength.">
+        <input type="radio" name="color-type" value="inversion"/>
+        <span>Inversion</span>
+      </label>
+      <label class="type-opt" data-tip="Permutation matrix on (R,G,B): channels swap places.">
+        <input type="radio" name="color-type" value="rotation"/>
+        <span>Color Rotation</span>
       </label>
     </div>
 
-    <!-- Colour Adjustment fields -->
-    <div id="colour-adjust-fields">
+    <div id="color-adjust-fields">
       <div class="section-label">Relative scale (0 – 200%)</div>
 
       <div class="slider-row">
         <span class="ch-label">R</span>
-        <input type="range" id="colour-relR" min="0" max="200" value="100"/>
-        <span class="slider-val" id="colour-relR-label">100%</span>
+        <input type="range" id="color-relR" min="0" max="200" value="100"/>
+        <span class="slider-val" id="color-relR-label">100%</span>
       </div>
       <div class="slider-row">
         <span class="ch-label">G</span>
-        <input type="range" id="colour-relG" min="0" max="200" value="100"/>
-        <span class="slider-val" id="colour-relG-label">100%</span>
+        <input type="range" id="color-relG" min="0" max="200" value="100"/>
+        <span class="slider-val" id="color-relG-label">100%</span>
       </div>
       <div class="slider-row">
         <span class="ch-label">B</span>
-        <input type="range" id="colour-relB" min="0" max="200" value="100"/>
-        <span class="slider-val" id="colour-relB-label">100%</span>
+        <input type="range" id="color-relB" min="0" max="200" value="100"/>
+        <span class="slider-val" id="color-relB-label">100%</span>
       </div>
 
       <div class="section-label" style="margin-top:10px">Absolute offset (−255 – +255)</div>
 
       <div class="slider-row">
         <span class="ch-label">R</span>
-        <input type="range" id="colour-absR" min="-255" max="255" value="0"/>
-        <span class="slider-val" id="colour-absR-label">0</span>
+        <input type="range" id="color-absR" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="color-absR-label">0</span>
       </div>
       <div class="slider-row">
         <span class="ch-label">G</span>
-        <input type="range" id="colour-absG" min="-255" max="255" value="0"/>
-        <span class="slider-val" id="colour-absG-label">0</span>
+        <input type="range" id="color-absG" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="color-absG-label">0</span>
       </div>
       <div class="slider-row">
         <span class="ch-label">B</span>
-        <input type="range" id="colour-absB" min="-255" max="255" value="0"/>
-        <span class="slider-val" id="colour-absB-label">0</span>
+        <input type="range" id="color-absB" min="-255" max="255" value="0"/>
+        <span class="slider-val" id="color-absB-label">0</span>
       </div>
     </div>
 
-    <!-- Sepia (no parameters) -->
     <div id="sepia-fields" style="display:none">
       <p class="desc" style="margin:0">
         Converts the image to a warm brownish tone by mixing RGB channels
@@ -166,32 +180,70 @@
       </p>
     </div>
 
+    <div id="grayscale-fields" style="display:none">
+      <div class="slider-row">
+        <span class="ch-label">%</span>
+        <input type="range" id="color-gray" min="0" max="100" value="100"/>
+        <span class="slider-val" id="color-gray-label">100%</span>
+      </div>
+    </div>
+
+    <div id="inversion-fields" style="display:none">
+      <div class="slider-row">
+        <span class="ch-label">%</span>
+        <input type="range" id="color-inv" min="0" max="100" value="100"/>
+        <span class="slider-val" id="color-inv-label">100%</span>
+      </div>
+    </div>
+
+    <div id="rotation-fields" style="display:none">
+      <div class="field-row">
+        <label style="width:auto;min-width:56px">Order</label>
+        <select id="color-rot" style="flex:1;padding:5px 6px">
+          <option value="RBG">R B G</option>
+          <option value="GRB">G R B</option>
+          <option value="GBR">G B R</option>
+          <option value="BRG">B R G</option>
+          <option value="BGR">B G R</option>
+        </select>
+      </div>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn" id="colour-cancel">Cancel</button>
-      <button class="btn primary" id="colour-apply">Apply</button>
+      <button class="btn" id="color-cancel">Cancel</button>
+      <button class="btn primary" id="color-apply">Apply</button>
     </div>
   </div>
 </div>
 
-<!-- ─Blur Modal──────────────────────────────────────────────-->
 <div class="modal-bg" id="blur-modal-bg" style="display:none">
   <div class="modal">
     <h3>Apply Blur</h3>
     <p class="desc">Choose a blur algorithm and set its parameters.</p>
 
-    <!-- Type selector -->
     <div class="type-row">
-      <label class="type-opt">
+      <label class="type-opt" data-tip="Nonlinear: each pixel becomes the median of its neighbourhood (kills salt-and-pepper noise).">
         <input type="radio" name="blur-type" value="median" checked/>
         <span>Median</span>
       </label>
-      <label class="type-opt">
+      <label class="type-opt" data-tip="Convolution with a Gaussian bell kernel: nearby pixels weigh more.">
         <input type="radio" name="blur-type" value="gaussian"/>
         <span>Gaussian</span>
       </label>
+      <label class="type-opt" data-tip="Convolution with a uniform kernel: plain neighbourhood average.">
+        <input type="radio" name="blur-type" value="box"/>
+        <span>Box</span>
+      </label>
+      <label class="type-opt" data-tip="Unsharp mask: img·(1+v) − blur·v boosts what the blur removes.">
+        <input type="radio" name="blur-type" value="sharpen"/>
+        <span>Sharpen</span>
+      </label>
+      <label class="type-opt" data-tip="Downsample then nearest-neighbour upsample: block averaging.">
+        <input type="radio" name="blur-type" value="pixelate"/>
+        <span>Pixelate</span>
+      </label>
     </div>
 
-    <!-- Median: radius -->
     <div class="field-row" id="median-radius-row">
       <label>r</label>
       <input type="number" id="blur-radius" min="1" max="5" value="1"
@@ -199,12 +251,32 @@
       <span style="font-size:11px;color:var(--muted)">kernel radius (1 – 5)</span>
     </div>
 
-    <!-- Gaussian: standard deviation -->
     <div class="field-row" id="gaussian-sd-row" style="display:none">
       <label>σ</label>
       <input type="number" id="blur-sd" min="0.1" step="0.1" value="1.0"
              placeholder="e.g. 1.5"/>
       <span style="font-size:11px;color:var(--muted)">std. deviation (px)</span>
+    </div>
+
+    <div class="field-row" id="box-radius-row" style="display:none">
+      <label>r</label>
+      <input type="number" id="box-radius" min="1" max="10" value="1"
+             style="width:56px;flex:none"/>
+      <span style="font-size:11px;color:var(--muted)">kernel radius (1 – 10)</span>
+    </div>
+
+    <div class="field-row" id="sharpen-amt-row" style="display:none">
+      <label>amt</label>
+      <input type="number" id="sharpen-amt" min="0.1" step="0.1" value="1.0"
+             style="width:56px;flex:none"/>
+      <span style="font-size:11px;color:var(--muted)">sharpen strength</span>
+    </div>
+
+    <div class="field-row" id="pixelate-row" style="display:none">
+      <label>size</label>
+      <input type="number" id="pixelate-v" min="2" max="200" value="32"
+             style="width:56px;flex:none"/>
+      <span style="font-size:11px;color:var(--muted)">block count (higher = finer)</span>
     </div>
 
     <p class="blur-note">
@@ -220,6 +292,27 @@
   </div>
 </div>
 
+<div class="modal-bg" id="compress-modal-bg" style="display:none">
+  <div class="modal">
+    <h3>Compress (rank-k SVD)</h3>
+    <p class="desc">Each color channel is a matrix. Keeping only its top-k
+      singular components gives the best rank-k approximation — small k means
+      heavy compression and a visibly "low-rank" image.</p>
+    <div class="field-row">
+      <label>k</label>
+      <input type="number" id="compress-k" min="1" max="200" value="20"
+             style="width:64px;flex:none"/>
+      <span style="font-size:11px;color:var(--muted)">singular components to keep</span>
+    </div>
+    <div class="error-msg" id="compress-error"></div>
+    <div class="modal-actions">
+      <button class="btn" id="compress-cancel">Cancel</button>
+      <button class="btn primary" id="compress-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="../Shared/tooltip.js"></script>
 <script src="image.js"></script>
 <script src="scene.js"></script>
 <script src="ui.js"></script>

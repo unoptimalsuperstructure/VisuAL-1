@@ -107,6 +107,32 @@ function invertMatrix4(m) {
   ];
 }
 
+function scaleMatrix(c, cx, cy, cz) {
+  return [
+    c, 0, 0, (1 - c)*cx,
+    0, c, 0, (1 - c)*cy,
+    0, 0, c, (1 - c)*cz,
+    0, 0, 0, 1,
+  ];
+}
+
+function shearMatrix(a1, a2, a3, d1, d2, d3, c1, c2, c3, k) {
+  const n = [d2*c3 - d3*c2, d3*c1 - d1*c3, d1*c2 - d2*c1];   // d × c
+  const n2 = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];
+  const f  = k / n2;
+  const na = n[0]*a1 + n[1]*a2 + n[2]*a3;
+  const cc = [c1, c2, c3];
+  const M  = [];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++) M[i*3 + j] = (i === j ? 1 : 0) + f*cc[i]*n[j];
+  return [
+    M[0], M[1], M[2], -f*na*c1,
+    M[3], M[4], M[5], -f*na*c2,
+    M[6], M[7], M[8], -f*na*c3,
+    0,    0,    0,    1,
+  ];
+}
+
 function applyMatrix(mat, verts, centre) {
   const nv = verts.map(v => {
     const r = matMul4(mat, [v[0], v[1], v[2], 1]);

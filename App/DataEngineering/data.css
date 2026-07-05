@@ -1,0 +1,90 @@
+#sidebar { overflow-y: auto; }
+
+.de-select {
+  flex: 1;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.de-select:focus { border-color: var(--text); }
+
+/* Categorical colour legend ───────────────────────── */
+
+.de-legend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.de-legend-head:hover { color: var(--text); }
+.de-legend-head .chevron { font-size: 10px; transition: transform 0.2s; }
+.de-legend-head.collapsed .chevron { transform: rotate(-90deg); }
+
+.de-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.de-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* SVD walkthrough panel ──────────────────────────────────────── */
+
+.svd-step-label {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 4px 0 6px;
+  min-height: 28px;
+}
+
+pre.matrix {
+  font-family: var(--font-maths);
+  font-size: 11px;
+  line-height: 1.7;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+#svd-matrix { margin-top: 8px; }
+
+/* Controls hint ──────────────────────────────────────────────── */
+
+.hint-block {
+  padding: 12px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+}
+.hint-block strong {
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-maths);
+}
+
+/* Geometric explanation ──────────────────────────────────────────────── */
+.svd-step-why {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 6px;
+}

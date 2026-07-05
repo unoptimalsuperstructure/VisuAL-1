@@ -1,6 +1,6 @@
 'use strict';
 
-// Add more colour if anyone asks for more
+// Add more color if anyone asks for more
 
 const CAT_PALETTE = [
   '#e05555', '#4a90d9', '#50b86c', '#e09c30',
