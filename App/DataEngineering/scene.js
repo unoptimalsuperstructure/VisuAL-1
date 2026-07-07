@@ -169,7 +169,9 @@ function svdGoto(target) {
   d.raf = requestAnimationFrame(tick);
 }
 
-
+const PC_COLORS = [0xcc0000, 0x00aa00, 0x0000cc];
+const PC_NAMES  = ['PC1', 'PC2', 'PC3'];
+const PCA_DROP = [2, 1, 0, null];
 const PCA_STEPS = [
   { dim: 3, label: '0 · Full data (3-D)',
     why: 'Nothing dropped yet — the projection is the identity.' },
@@ -202,14 +204,63 @@ function startPCA() {
   }
   const retained = [3, 2, 1, 0].map(k =>
     values.slice(0, k).reduce((a, b) => a + Math.max(0, b), 0) / total);
- 
-  DATA.pca = { projs, retained, step: 0, anim: null, raf: 0 };
+  
+  const group = new THREE.Group();
+  const axes = [];
+  for (let c = 0; c < 3; c++) {
+    const len = 1.2 + 2.4 * Math.sqrt(Math.max(0, values[c]) / (values[0] || 1));
+    const dir = [V[c], V[3 + c], V[6 + c]];
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-dir[0]*len, -dir[1]*len, -dir[2]*len),
+      new THREE.Vector3( dir[0]*len,  dir[1]*len,  dir[2]*len),
+    ]);
+    const line = new THREE.Line(geo,
+      new THREE.LineBasicMaterial({ color: PC_COLORS[c] }));
+    group.add(line);
+    axes.push(line);
+  }
+  scene.add(group);
+
+  // PCA VIA SVD!!
+
+  const n = DATA.pts.length;
+  const XtX = new Array(9).fill(0);
+  for (const p of DATA.pts) {
+    XtX[0]+=p[0]*p[0]; XtX[1]+=p[0]*p[1]; XtX[2]+=p[0]*p[2];
+    XtX[4]+=p[1]*p[1]; XtX[5]+=p[1]*p[2]; XtX[8]+=p[2]*p[2];
+  }
+  XtX[3]=XtX[1]; XtX[6]=XtX[2]; XtX[7]=XtX[5];
+  const eigX = eigSymmetric3(XtX);
+  const svdlink = {
+    n,
+    sigma:  eigX.values.map(v => Math.sqrt(Math.max(0, v))),
+    fromC:  values.map(v => Math.sqrt(Math.max(0, v) * (n - 1))),
+    align: [0, 1, 2].map(c => Math.abs(
+      eigX.vectors[c]*V[c] + eigX.vectors[3+c]*V[3+c] + eigX.vectors[6+c]*V[6+c])),
+  };
+
+  DATA.pca = { projs, retained, step: 0, anim: null, raf: 0, group, axes, values, svdlink };
   document.getElementById('pca-panel').style.display = 'block';
   document.getElementById('btn-pca').textContent = 'Stop PCA';
   applyPCAProjection(projs[0]);
+  updatePCAAxes();
   renderPCAStep();
 }
- 
+
+function updatePCAAxes() {
+  const d = DATA.pca; if (!d) return;
+  const surviving = 3 - d.step;
+  const dropping = PCA_DROP[d.step];
+  for (let c = 0; c < 3; c++) {
+    const line = d.axes[c];
+    line.visible = c < surviving;
+    const mat = line.material;
+    mat.transparent = (c === dropping);
+    mat.opacity = (c === dropping) ? 0.35 : 1;
+    mat.needsUpdate = true;
+  }
+}
+
 function stopPCA() {
   if (!DATA.pca) return;
   cancelAnimationFrame(DATA.pca.raf);
@@ -245,6 +296,7 @@ function pcaGoto(target) {
   if (Math.abs(target - d.step) > 1) {
     d.step = target;
     applyPCAProjection(d.projs[target]);
+    updatePCAAxes();
     renderPCAStep();
     return;
   }
@@ -258,7 +310,7 @@ function pcaGoto(target) {
     const P = A.map((a, i) => a + (B[i] - a) * t);
     applyPCAProjection(P);
     if (u < 1) { d.raf = requestAnimationFrame(tick); }
-    else { d.anim = null; d.step = target; applyPCAProjection(B); renderPCAStep(); }
+    else { d.anim = null; d.step = target; applyPCAProjection(B); updatePCAAxes(); renderPCAStep(); }
   };
   d.raf = requestAnimationFrame(tick);
 }

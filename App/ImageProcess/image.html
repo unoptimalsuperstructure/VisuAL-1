@@ -48,17 +48,20 @@
       <div class="section-head">Filters <span class="chevron">▾</span></div>
       <div class="section-body">
         <button class="btn" id="btn-color" data-tip="Color maps are 3×3 matrices acting on each pixel's (R,G,B) vector — grayscale, sepia and channel rotations are all linear maps of color space.">
-          <span class="btn-icon">◐</span> Color Filter
+          Color Filter
         </button>
         <button class="btn" id="btn-blur" data-tip="Blurs and sharpens are convolutions: each output pixel is a weighted sum of its neighbours — one huge, sparse linear operator applied to the whole image.">
-          <span class="btn-icon">◎</span> Blur
+          Blur
         </button>
         <button class="btn" id="btn-sobel" data-tip="Two 3×3 kernels estimate the brightness gradient ∂I/∂x and ∂I/∂y; edge strength is the gradient's magnitude.">
-          <span class="btn-icon">⊞</span> Sobel Edge Detection
+          Edge Detection
         </button>
         <button class="btn" id="btn-compress" data-tip="Low-rank approximation: keep only the top-k singular components of each channel — the SVD as an image compressor.">
-          ▦ Compress (SVD)
+          Compress (SVD)
         </button>
+        <div class="section-label" style="margin-top:10px">Explore</div>
+        <button class="btn" id="btn-conv-explore" data-tip="Zoom into the pixels and watch a kernel slide cell by cell — patch × kernel, summed, one output pixel at a time.">Convolution explorer</button>
+        <button class="btn" id="btn-rgb-cloud" data-tip="Every pixel plotted at (R,G,B) in colour space, with the palette's principal axes and a step-through SVD of its covariance.">RGB colour cloud</button>
         <button class="btn" id="btn-undo" style="margin-top:6px">
           <span class="btn-icon">↩</span> Undo
         </button>
@@ -209,6 +212,8 @@
       </div>
     </div>
 
+    <div class="error-msg" id="blur-error" style="color: var(--warning); font-size: 12px; margin-bottom: 10px; min-height: 14px;"></div>
+
     <div class="modal-actions">
       <button class="btn" id="color-cancel">Cancel</button>
       <button class="btn primary" id="color-apply">Apply</button>
@@ -279,12 +284,6 @@
       <span style="font-size:11px;color:var(--muted)">block count (higher = finer)</span>
     </div>
 
-    <p class="blur-note">
-      Median blur on large images may take several seconds for r ≥ 3.
-    </p>
-
-    <div class="error-msg" id="blur-error"></div>
-
     <div class="modal-actions">
       <button class="btn" id="blur-cancel">Cancel</button>
       <button class="btn primary" id="blur-apply">Apply</button>
@@ -312,7 +311,84 @@
   </div>
 </div>
 
+<!-- ── Convolution explorer overlay ── -->
+<div class="explore-overlay" id="cx-overlay" style="display:none">
+  <div class="explore-panel">
+    <div class="explore-head">
+      <h3>Convolution explorer</h3>
+      <span id="cx-kernel-name" style="color:var(--muted);font-size:12px"></span>
+      <div class="spacer"></div>
+      <button class="btn" id="cx-close">✕ Close</button>
+    </div>
+    <div class="explore-row">
+      <div class="explore-col">
+        <div class="explore-label" data-tip="Click anywhere to move the zoom window (orange).">Image — click to move the window</div>
+        <canvas id="cx-preview" width="230" height="170"></canvas>
+        <div class="explore-controls">
+          <select id="cx-kernel">
+            <option value="box">Box blur ⅑</option>
+            <option value="gaussian">Gaussian 1/16</option>
+            <option value="sharpen">Sharpen</option>
+            <option value="sobelx">Sobel ∂/∂x</option>
+            <option value="sobely">Sobel ∂/∂y</option>
+            <option value="laplace">Laplacian</option>
+          </select>
+          <button class="btn" id="cx-play">▶ Play</button>
+          <button class="btn" id="cx-step">Step</button>
+          <button class="btn" id="cx-reset">Reset</button>
+          <label style="font-size:11px;color:var(--muted)">speed
+            <input type="range" id="cx-speed" min="1" max="40" value="6" style="width:80px;vertical-align:middle"/>
+          </label>
+        </div>
+        <pre id="cx-math" class="explore-math"></pre>
+      </div>
+      <div class="explore-col">
+        <div class="explore-label">Input (luma) — kernel window in orange</div>
+        <canvas id="cx-src" width="330" height="330"></canvas>
+      </div>
+      <div class="explore-col">
+        <div class="explore-label" data-tip="Each cell appears the moment its weighted sum is computed — greyed cells haven't been reached yet.">Output — builds as the kernel slides</div>
+        <canvas id="cx-out" width="330" height="330"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<!-- ── RGB color cloud overlay ── -->
+<div class="explore-overlay" id="rc-overlay" style="display:none">
+  <div class="explore-panel">
+    <div class="explore-head">
+      <h3>RGB color cloud</h3>
+      <div class="spacer"></div>
+      <button class="btn" id="rc-close">✕ Close</button>
+    </div>
+    <div class="explore-row">
+      <div class="explore-col" style="flex:1;min-width:0">
+        <div class="explore-label">Drag to orbit — each point is one pixel at (R, G, B)</div>
+        <canvas id="rc-canvas" class="rc-canvas"></canvas>
+      </div>
+      <div class="explore-col" style="width:280px;flex:none">
+        <div class="explore-label">SVD of the color covariance</div>
+        <div id="rc-step-label" style="font-size:12px;color:var(--text);margin:4px 0"></div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="btn" id="rc-prev">‹ Prev</button>
+          <button class="btn" id="rc-next">Next ›</button>
+        </div>
+        <pre id="rc-matrix" class="matrix"></pre>
+        <div id="rc-info" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6">
+          The black wireframe is a unit sphere pushed through the step's matrix —
+          by step 3 it is the palette's 1σ ellipsoid: long axis = the color
+          direction the image varies most along.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../Shared/matrix.js"></script>
 <script src="../Shared/tooltip.js"></script>
+<script src="explore.js"></script>
 <script src="image.js"></script>
 <script src="scene.js"></script>
 <script src="ui.js"></script>

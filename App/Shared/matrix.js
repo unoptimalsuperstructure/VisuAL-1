@@ -116,6 +116,17 @@ function scaleMatrix(c, cx, cy, cz) {
   ];
 }
 
+function projectPlaneMatrix(a, b, c, d) {
+  const L = Math.sqrt(a*a + b*b + c*c);
+  a /= L; b /= L; c /= L; d /= L;
+  return [
+    1 - a*a, -a*b,    -a*c,    a*d,
+    -a*b,    1 - b*b, -b*c,    b*d,
+    -a*c,    -b*c,    1 - c*c, c*d,
+    0,       0,       0,       1,
+  ];
+}
+
 function shearMatrix(a1, a2, a3, d1, d2, d3, c1, c2, c3, k) {
   const n = [d2*c3 - d3*c2, d3*c1 - d1*c3, d1*c2 - d2*c1];   // d × c
   const n2 = n[0]*n[0] + n[1]*n[1] + n[2]*n[2];

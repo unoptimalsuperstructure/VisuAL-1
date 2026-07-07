@@ -88,3 +88,39 @@ pre.matrix {
   line-height: 1.55;
   margin: 0 0 6px;
 }
+
+/* PC legend in the PCA panel ──────────────────────────────────────────────── */
+.pca-pc {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; padding: 2px 0;
+}
+.pca-swatch { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.pca-pc-name { font-weight: 700; color: var(--text); min-width: 30px; }
+.pca-pc-var { color: var(--muted); }
+.pca-pc-tag { color: #d6455c; font-weight: 700; margin-left: auto; }
+.pca-pc.dropped .pca-pc-name,
+.pca-pc.dropped .pca-pc-var { text-decoration: line-through; opacity: 0.5; }
+.pca-pc.dropped .pca-swatch { opacity: 0.35; }
+.pca-pc.dropping { animation: pca-pulse 1s ease-in-out infinite; }
+@keyframes pca-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+ 
+/* PC dropped ──────────────────────────────────────────────── */
+.pca-dropped {
+  font-size: 11px;
+  color: var(--text);
+  background: var(--panel2);
+  border-left: 3px solid var(--text);
+  border-radius: 5px;
+  padding: 5px 8px;
+  margin: 4px 0 6px;
+  line-height: 1.5;
+}
+ 
+/* PCA SVD bridge panel ──────────────────────────────────────────────── */
+.pca-svd-derive {
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 4px 0 6px;
+}
+.pca-svd-derive br + * { margin-top: 2px; }
+#pca-svd-table { font-size: 10.5px; }

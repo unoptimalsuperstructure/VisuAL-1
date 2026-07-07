@@ -172,15 +172,71 @@ function renderSVDStep() {
 
 function renderPCAStep() {
   const d = DATA.pca; if (!d) return;
+  if (pcaSvdOpen) renderPCASVDLink();
+
   const st = PCA_STEPS[d.step];
   document.getElementById('pca-step-label').textContent = st.label;
   const why = document.getElementById('pca-step-why');
   if (why) why.textContent = st.why;
+
+  const total = d.values.reduce((a, b) => a + Math.max(0, b), 0) || 1;
+  const surviving = 3 - d.step;
+  const dropping = PCA_DROP[d.step];
+  const hex = c => '#' + c.toString(16).padStart(6, '0');
+  const legend = document.getElementById('pca-legend');
+  if (legend) legend.innerHTML = [0, 1, 2].map(c => {
+    const share = (Math.max(0, d.values[c]) / total * 100).toFixed(1);
+    const dropped = c >= surviving;
+    const isNext = c === dropping;
+    const cls = 'pca-pc' + (dropped ? ' dropped' : '') + (isNext ? ' dropping' : '');
+    return `<div class="${cls}"><span class="pca-swatch" style="background:${hex(PC_COLORS[c])}"></span>` +
+           `<span class="pca-pc-name">${PC_NAMES[c]}</span>` +
+           `<span class="pca-pc-var">${share}% var</span>` +
+           `${isNext ? '<span class="pca-pc-tag">removing →</span>' : ''}</div>`;
+  }).join('');
+
+  const dropEl = document.getElementById('pca-dropped');
+  if (dropEl) {
+    const justDropped = st.dim < 3 ? st.dim : null;
+    if (justDropped !== null) {
+      const share = (Math.max(0, d.values[justDropped]) / total * 100).toFixed(1);
+      dropEl.innerHTML = `Dropped <strong>${PC_NAMES[justDropped]}</strong> — the ` +
+        `direction of least remaining variance (${share}%).`;
+      dropEl.style.display = 'block';
+    } else {
+      dropEl.style.display = 'none';
+    }
+  }
+ 
   const rv = document.getElementById('pca-retained');
   if (rv) rv.textContent =
     'Variance retained: ' + (d.retained[d.step] * 100).toFixed(1) + '%';
   document.getElementById('pca-matrix').textContent =
     'P =\n' + fmtMat3(d.projs[d.step]);
+}
+
+// PCA via SVD ──────────────────────────────────────────────
+
+let pcaSvdOpen = false;
+ 
+function renderPCASVDLink() {
+  const d = DATA.pca; if (!d || !d.svdlink) return;
+  const L = d.svdlink;
+  const f = v => v.toFixed(3).padStart(9);
+  let rows = ' i   σᵢ (SVD of X)   √((n−1)λᵢ)   |vᵢ·PCᵢ|\n';
+  for (let i = 0; i < 3; i++)
+    rows += ` ${i + 1}   ${f(L.sigma[i])}      ${f(L.fromC[i])}     ${L.align[i].toFixed(6)}\n`;
+  rows += `\n(n = ${L.n} points — identical columns and alignments of 1\n mean both routes produce the same decomposition)`;
+  document.getElementById('pca-svd-table').textContent = rows;
+}
+ 
+function togglePCASVD() {
+  pcaSvdOpen = !pcaSvdOpen;
+  const body = document.getElementById('pca-svd-body');
+  const head = document.getElementById('pca-svd-head');
+  if (body) body.style.display = pcaSvdOpen ? 'block' : 'none';
+  if (head) head.classList.toggle('collapsed', !pcaSvdOpen);
+  if (pcaSvdOpen) renderPCASVDLink();
 }
 
 function fmtMat3(m) {
@@ -225,6 +281,7 @@ function initDataEngineering() {
   bind('btn-pca-next', () => pcaGoto((DATA.pca?.step ?? 0) + 1));
   bind('btn-pca-prev', () => pcaGoto((DATA.pca?.step ?? 0) - 1));
   bind('btn-pca-reset',() => pcaGoto(0));
+  bind('pca-svd-head', togglePCASVD);
   bind('btn-clear-data', clearData);
   bind('btn-svd-next', () => svdGoto((DATA.svd?.step ?? 0) + 1));
   bind('btn-svd-prev', () => svdGoto((DATA.svd?.step ?? 0) - 1));
