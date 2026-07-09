@@ -301,8 +301,6 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup',    () => { dragging = null; });
 canvas.addEventListener('mouseleave', () => { dragging = null; });
 
-// To implement "arrange edges" for tidiness (ref to chem draw for auto arrangement of molecule drawing) 
-
 // Load Canvas ────────────────────────────────────────────── 
 
 resizeCanvas();

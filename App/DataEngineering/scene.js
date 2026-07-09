@@ -66,9 +66,9 @@ function toggleFitLine() {
 
 const SVD_STEPS = [
   { label: '0 · Unit sphere (identity)',                          key: 'I'  },
-  { label: '1 · Apply Vᵀ  — rotate into the principal frame',     key: 'Vt' },
-  { label: '2 · Apply Σ   — stretch by the singular values',      key: 'S'  },
-  { label: '3 · Apply U   — rotate back · result = M',            key: 'U'  },
+  { label: '1 · Apply Vᵀ, rotate into the principal frame',     key: 'Vt' },
+  { label: '2 · Apply Σ, stretch by the singular values',      key: 'S'  },
+  { label: '3 · Apply U, rotate back',            key: 'U'  },
 ];
 
 function startSVD() {
@@ -174,13 +174,13 @@ const PC_NAMES  = ['PC1', 'PC2', 'PC3'];
 const PCA_DROP = [2, 1, 0, null];
 const PCA_STEPS = [
   { dim: 3, label: '0 · Full data (3-D)',
-    why: 'Nothing dropped yet — the projection is the identity.' },
+    why: 'Nothing dropped yet, the projection is the identity.' },
   { dim: 2, label: '1 · Project onto top 2 PCs — plane (2-D)',
     why: 'P₂ = V₂V₂ᵀ flattens each point onto the best-fit plane: the one ' +
          'that keeps the most variance.' },
   { dim: 1, label: '2 · Project onto top PC — line (1-D)',
     why: 'P₁ = v₁v₁ᵀ collapses the cloud onto the single direction of ' +
-         'greatest variance — the same line as the orthogonal fit.' },
+         'greatest variance.' },
   { dim: 0, label: '3 · Collapse to the centroid (0-D)',
     why: 'P₀ = 0 sends every point to the mean. All variance is gone; ' +
          'the retained fraction is 0.' },
@@ -220,8 +220,6 @@ function startPCA() {
     axes.push(line);
   }
   scene.add(group);
-
-  // PCA VIA SVD!!
 
   const n = DATA.pts.length;
   const XtX = new Array(9).fill(0);

@@ -1,7 +1,7 @@
 'use strict';
 
 const CX_KERNELS = {
-  box:      { name: 'Box blur ⅑',   k: [1,1,1, 1,1,1, 1,1,1].map(v => v/9) },
+  box:      { name: 'Box blur 1/9',   k: [1,1,1, 1,1,1, 1,1,1].map(v => v/9) },
   gaussian: { name: 'Gaussian 1/16', k: [1,2,1, 2,4,2, 1,2,1].map(v => v/16) },
   sharpen:  { name: 'Sharpen',       k: [0,-1,0, -1,5,-1, 0,-1,0] },
   sobelx:   { name: 'Sobel ∂/∂x',    k: [-1,0,1, -2,0,2, -1,0,1] },
@@ -149,13 +149,13 @@ function cxStepOnce() {
   CX.out[CX.ky * CX.N + CX.kx] = cxConvolveAt(CX.kx, CX.ky).sum;
   CX.kx++;
   if (CX.kx > CX.N - 2) { CX.kx = 1; CX.ky++; }
-  if (CX.ky > CX.N - 2) { CX.ky = 1; return false; }   // finished a pass
+  if (CX.ky > CX.N - 2) { CX.ky = 1; return false; }
   return true;
 }
 
 function cxPlayLoop(now) {
   if (!CX.playing) return;
-  const speed = +document.getElementById('cx-speed').value;   // cells/second
+  const speed = +document.getElementById('cx-speed').value;
   if (now - CX.lastTick >= 1000 / speed) {
     CX.lastTick = now;
     if (!cxStepOnce()) cxStop();

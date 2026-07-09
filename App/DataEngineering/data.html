@@ -31,9 +31,9 @@
         <div id="data-analysis" style="display:none">
           <button class="btn" id="btn-change-cols">Change columns…</button>
           <div class="section-label">Analysis</div>
-          <button class="btn" id="btn-fit-line" data-tip="Orthogonal (total least squares) fit: through the centroid, along the covariance's dominant eigenvector — minimising perpendicular distances.">Line of best fit</button>
+          <button class="btn" id="btn-fit-line" data-tip="Orthogonal (total least squares) fit: through the centroid, along the covariance's dominant eigenvector, minimising perpendicular distances.">Line of best fit</button>
           <button class="btn" id="btn-svd" data-tip="Factor the data's covariance shape as M = U Σ Vᵀ and watch a unit sphere become the data ellipsoid: rotate, stretch, rotate.">Step-by-step SVD</button>
-          <button class="btn" id="btn-pca" data-tip="Flatten the cloud one dimension at a time — 3D → plane → line → point — by projecting onto the top principal components.">Step-by-step PCA</button>
+          <button class="btn" id="btn-pca" data-tip="Flatten the point cloud one dimension at a time, 3D → plane → line → point, by projecting onto the top principal components.">Step-by-step PCA</button>
           <button class="btn danger" id="btn-clear-data">Clear data</button>
           <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin:6px 0">
             <input type="checkbox" id="chk-hide-data"/> Hide data points
@@ -41,7 +41,7 @@
           <div id="data-legend"></div>
 
           <div id="svd-panel" style="display:none">
-            <div class="section-label" style="margin-top:10px">SVD&nbsp;&nbsp;M = U Σ Vᵀ</div>
+            <div class="section-label" style="margin-top:10px">SVD&nbsp;&nbsp;U Σ Vᵀ</div>
             <div id="svd-step-label" class="svd-step-label"></div>
             <div id="svd-step-why" class="svd-step-why"></div>
             <div style="display:flex;gap:6px">
@@ -64,7 +64,7 @@
             <button class="btn" id="btn-pca-reset" style="margin-top:4px">Reset to full data</button>
             <pre id="pca-matrix" class="matrix"></pre>
 
-            <div class="de-legend-head" id="pca-svd-head" data-tip="The principal components ARE the right singular vectors of the centred data matrix — this panel computes both routes on your dataset and shows them agreeing.">
+            <div class="de-legend-head" id="pca-svd-head" data-tip="The principal components are the right singular vectors of the centred data matrix, this panel computes both routes on your dataset and shows them agreeing.">
               <span>How PCA uses SVD</span><span class="chevron">▾</span>
             </div>
             <div id="pca-svd-body" style="display:none">
@@ -72,7 +72,7 @@
                 Centre the data into X (n×3), then take its SVD:
                 X = U Σ Vᵀ. The covariance becomes<br>
                 &nbsp;&nbsp;C = XᵀX/(n−1) = V (Σ²/(n−1)) Vᵀ<br>
-                — already diagonalised. So the PCs are V's columns, the
+                already diagonalised. So the PCs are V's columns, the
                 variances are λᵢ = σᵢ²/(n−1), and each flatten step
                 P<sub>k</sub> = V<sub>k</sub>V<sub>k</sub>ᵀ just keeps V's
                 first k columns.

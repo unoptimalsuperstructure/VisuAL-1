@@ -41,7 +41,13 @@
         Simulation
       </div>
       <div class="section-body" id="section-sim">
+        <div class="section-label">Chain type</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="btn chain-btn active" id="btn-chain-dtmc" data-tip="Discrete-time: edge weights are transition probabilities (columns normalised to 1); one step is π ← Pπ." onclick="setChainMode('dtmc')">DTMC</button>
+          <button class="btn chain-btn" id="btn-chain-ctmc" data-tip="Continuous-time: edge weights are exponential jump rates. The generator Q has columns summing to 0 and π evolves by dπ/dt = Qπ." onclick="setChainMode('ctmc')">CTMC</button>
+        </div>
         <div class="section-label">Distribution</div>
+        <canvas id="mk-dist-chart" style="display:none"></canvas>
         <div id="mk-dist-panel"></div>
         <button class="btn" onclick="openDistModal()" id="btn-set-dist" style="display:none">
           Set initial distribution…
@@ -69,6 +75,13 @@
         <label style="font-size:12px;display:flex;align-items:center;gap:6px">
           <input type="checkbox" id="chk-weights" checked onchange="render()"/> Show weights on edges
         </label>
+        <div class="field-row" style="margin-top:8px">
+          <label data-tip="Auto-step halts once the distribution stops moving: DTMC when ‖π′ − π‖₁ < ε, CTMC when ‖dπ/dt‖₁ < ε. Smaller ε = stricter convergence.">ε</label>
+          <input type="number" id="mk-eps" value="0.0001" min="0" step="0.0001"
+                 style="width:90px;flex:none"/>
+          <span style="font-size:10px;color:var(--muted)">convergence bound</span>
+        </div>
+        <div id="mk-conv-status" class="mk-conv-status" style="display:none"></div>
       </div>
     </div>
  
@@ -94,6 +107,7 @@
     <div id="mk-toolbar">
       <button class="mk-mode-btn active" id="btn-mode-node" onclick="setMode('node')">Add Node</button>
       <button class="mk-mode-btn"        id="btn-mode-edge" onclick="setMode('edge')">Add Edge</button>
+      <button class="mk-mode-btn"        id="btn-neaten"    onclick="neatenGraph()">Neaten Graph</button>
     </div>
     <div id="mk-hint">Click the canvas to place a node</div>
     <div id="mk-step-badge">Step 0</div>
