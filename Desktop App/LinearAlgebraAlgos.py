@@ -19,6 +19,7 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
     def helper(mat: np.array, top: np.array, size: int):
         global hist
         i = 0
+        swap = 0
         while i < mat.shape[1]:
             if np.linalg.norm(mat.T[i]) > 0:
                 break
@@ -26,7 +27,6 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
         if i == mat.shape[1]:
             return mat
         else:
-            swap = 0
             if pivot:
                 lst = abs(mat)[:,i].tolist()
                 swap = lst.index(max(lst))
@@ -45,8 +45,14 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
                         tempRow = elementary[x].copy()
                         elementary[x] = elementary[swap + x]
                         elementary[swap + x] = tempRow
+                        tempL = hist[-2][3].copy()
+                        for m in range(size - mat.shape[0]):
+                            tempEntry1 = tempL[x, m]
+                            tempEntry2 = tempL[x + swap, m]
+                            tempL[x, m] = tempEntry2
+                            tempL[x + swap, m] = tempEntry1
                         hist[-1].append(elementary @ hist[-2][2])
-                        hist[-1].append(hist[-2][3])
+                        hist[-1].append(tempL)
                 else:
                     hist.append([mat.copy(), f"R1 <-> R{swap + 1}"])
                     if enableLU:
@@ -57,7 +63,16 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
                         hist[-1].append(elementary @ hist[-2][2])
                         hist[-1].append(hist[-2][3])
             elif enableLU:
-                hist[-1].append(np.eye(size))
+                try:
+                    hist[-1].append(hist[-2][2])
+                    hist[-1].append(hist[-2][3])
+                except:
+                    elementary = np.eye(size)
+                    tempRow = elementary[0].copy()
+                    elementary[0] = elementary[swap]
+                    elementary[swap] = tempRow
+                    hist[-1].append(elementary)
+                    hist[-1].append(np.eye(size))
         for k in range(1, mat.shape[0]):
             coeff = mat[k,i]/mat[0,i]
             mat[k] -= coeff * mat[0]
@@ -69,17 +84,17 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
                 x = top.shape[0] if top.shape[0] != top.size else 1
                 hist.append([np.block([[top], [mat]]), f"R{k + x + 1} {"-" if val >= 0 else "+"} {abs(val)}R{x + 1}"])
                 if enableLU:
-                    elementary = np.eye(size)
-                    elementary[k + x][x] = -val
+                    temp = hist[-2][3].copy()
+                    temp[k + x, x] = coeff
                     hist[-1].append(hist[-2][2])
-                    hist[-1].append(hist[-2][3] @ elementary)
+                    hist[-1].append(temp)
             else:
                 hist.append([mat.copy(), f"R{k + 1} {"-" if val >= 0 else "+"} {abs(val)}R1"])
                 if enableLU:
-                    elementary = np.eye(size)
-                    elementary[k][0] = -val
+                    temp = hist[-2][3].copy()
+                    temp[k, 0] = coeff
                     hist[-1].append(hist[-2][2])
-                    hist[-1].append(hist[-2][3] @ elementary)
+                    hist[-1].append(temp)
         if mat.shape[0] == 1:
             return mat
         else:

@@ -66,7 +66,7 @@ class NumStabilitySidePanel(QGridLayout):
         self.calculationAcc = int(x)
     
     def reset(self):
-        if self.matrix:
+        if self.matrix is not None:
             try:
                 self.viewer.layout.removeWidget(self.displayMatrix)
             except:
@@ -153,6 +153,8 @@ class NumStabilitySidePanel(QGridLayout):
                 pass
             
             self.op = QLabel()
+            self.op.setStyleSheet("font-family: Cascadia Mono")
+            self.enableLU = False
             self.viewer.layout.addWidget(self.op)
             self.pageView = self.pageLoader()
             self.viewer.layout.addWidget(self.pageView)
@@ -184,7 +186,10 @@ class NumStabilitySidePanel(QGridLayout):
             self.page -= 1
         self.pageLabel.setText(f"Page {self.page + 1} of {self.last + 1}")
         try:
-            self.op.setText(self.hist[self.page][1])
+            if self.enableLU:
+                self.op.setText(self.hist[self.page][1] + "\n" + concat([toString(np.linalg.inv(self.hist[self.page][2]), 3), toString(self.hist[self.page][3], 3), toString(self.hist[self.page][0], 3)]))
+            else:
+                self.op.setText(self.hist[self.page][1])
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
         except:
             pass
@@ -194,7 +199,10 @@ class NumStabilitySidePanel(QGridLayout):
             self.page += 1
         self.pageLabel.setText(f"Page {self.page + 1} of {self.last + 1}")
         try:
-            self.op.setText(self.hist[self.page][1])
+            if self.enableLU:
+                self.op.setText(self.hist[self.page][1] + "\n" + concat([toString(np.linalg.inv(self.hist[self.page][2]), 3), toString(self.hist[self.page][3], 3), toString(self.hist[self.page][0], 3)]))
+            else:
+                self.op.setText(self.hist[self.page][1])
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
         except:
             pass
@@ -214,15 +222,17 @@ class NumStabilitySidePanel(QGridLayout):
         self.calculationAccWheel.setDisabled(True)
         if val == 1:
             pivot, enableLU = params[1:]
-            self.augcol = 1
             self.asMatrix = True
             final, self.hist = GaussianEliminate(self.matrix.copy(), pivot, enableLU)
             self.soln.setStyleSheet("color: black; font-family: Cascadia Mono")
             if enableLU:
-                lst = list(map(lambda lst: lst[2:], self.hist))
-                print(lst[-1][1])
-                print(lst[-1][0] @ lst[-1][1] @ final)
+                self.enableLU = True
+                self.augcol = 0
+                self.soln.setText("LUP Decomposition: P^-1LU = A")
+                self.op.setText(self.hist[0][1] + "\n" + concat([toString(np.linalg.inv(self.hist[0][2]), 3), toString(self.hist[0][3], 3), toString(self.hist[0][0], 3)]))
             else:
+                self.enableLU = False
+                self.augcol = 1
                 lst = GaussianSolve(final, pivot, enableLU)
                 if isinstance(lst, list):
                     for i in range(len(lst)):
@@ -230,12 +240,13 @@ class NumStabilitySidePanel(QGridLayout):
                     self.soln.setText(str(lst)[1:-1].replace("'",""))
                 else:
                     self.soln.setText(lst)
+                self.op.setText(self.hist[0][1])
             self.page = 0
             self.last = len(self.hist) - 1
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
             self.pageLabel.setText(f"Page 1 of {self.last + 1}")
-            self.op.setText(self.hist[0][1])
         elif val == 2:
+            self.enableLU = False
             modified, normed = params[1:]
             self.asMatrix = False
             self.hist, norm = GramSchmidtOrth(self.matrix.copy(), modified, normed, self.calculationAcc)

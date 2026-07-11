@@ -34,11 +34,9 @@ def toString(lst, acc):
 
 def concat(lst):
     a = [None]*len(lst[0])
-    if len(lst[0]) != len(a):
-        return "Error: This operation only works on square matrices of the same size"
     for arr in lst:
-        if len(arr) != len(a) or len(arr[0]) != len(a):
-            return "Error: This operation only works on square matrices of the same size"
+        if len(arr) != len(a):
+            return "Error: Invalid matrix dimensions"
         i = 0
         for line in arr:
             if a[i]:

@@ -5,8 +5,9 @@ from PyQt6.QtCore import QEvent, Qt
 from TwoDImages import TwoDViewer, TwoDSidePanel
 from ThreeDGraphics import ThreeDViewer, ThreeDSidePanel
 from NumStabilityAlgos import NumStabilityViewer, NumStabilitySidePanel
+from MarkovChains import MarkovChainsViewer, MarkovChainsSidePanel, MarkovChainsTimePanel
 from Images import Image
-import Shapes, json
+import Shapes, json, numpy as np
 from PathFinder import resource_path
 
 global restart
@@ -27,21 +28,22 @@ class OptionPanel(QVBoxLayout):
         self.Button1 = QPushButton("2D Image Processing")
         self.Button2 = QPushButton("3D Graphics Sandbox")
         self.Button3 = QPushButton("Numerical Stability")
-        #self.Button4 = QPushButton("Markov Chains")
+        self.Button4 = QPushButton("Markov Chains")
         self.Button5 = QPushButton("Size Setting")
         self.Button1.setFixedWidth(150)
         self.Button2.setFixedWidth(150)
         self.Button3.setFixedWidth(150)
-        #self.Button4.setFixedWidth(150)
+        self.Button4.setFixedWidth(150)
         self.Button5.setFixedWidth(150)
         self.Button1.clicked.connect(self.TwoDee)
         self.Button2.clicked.connect(self.ThreeDee)
         self.Button3.clicked.connect(self.NumStability)
+        self.Button4.clicked.connect(self.MarkovChains)
         self.Button5.clicked.connect(self.SizeConfig)
         self.addWidget(self.Button1)
         self.addWidget(self.Button2)
         self.addWidget(self.Button3)
-        #self.addWidget(self.Button4)
+        self.addWidget(self.Button4)
         self.addWidget(self.Button5)
         
         self.addWidget(QLabel("Hello!"))
@@ -51,7 +53,7 @@ class OptionPanel(QVBoxLayout):
         self.Button1.installEventFilter(self)
         self.Button2.installEventFilter(self)
         self.Button3.installEventFilter(self)
-        #self.Button4.installEventFilter(self)
+        self.Button4.installEventFilter(self)
         self.Button5.installEventFilter(self)
     
     def eventFilter(self, obj, event):
@@ -112,6 +114,11 @@ class OptionPanel(QVBoxLayout):
         self.newWindow.show()
         self.mainWindow.close()
     
+    def MarkovChains(self):
+        self.newWindow = MarkovChainsMainWindow()
+        self.newWindow.show()
+        self.mainWindow.close()
+    
     def SizeConfig(self):
         self.newWindow = SizeConfigWindow()
         self.newWindow.show()
@@ -132,7 +139,7 @@ class HomeWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.0b1 - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.2.0b2 - Home")
         f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = int(f1.readline())
         f1.close()
@@ -200,7 +207,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.0b1 - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.2.0b2 - 2D Image Processing")
         f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = f1.readline()
         try:
@@ -261,7 +268,7 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.0b1 - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.2.0b2 - 3D Visualiser")
         f1 = open(resource_path("static/sizeconfig.txt"))
         self.size = int(f1.readline())
         f1.close()
@@ -407,7 +414,7 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.0b1 - Numerical Stability")
+        self.setWindowTitle("Visu(AL)-1 v0.2.0b2 - Numerical Stability")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -433,6 +440,42 @@ class NumStabilityMainWindow(QMainWindow):
             self.resize(720, 415)
         self.mainLayout.setStretch(0, 4 * h)
         self.mainLayout.setStretch(1, 3 * w - 4 * h)
+    
+    def closeEvent(self, event):
+        self.window = HomeWindow()
+        self.window.show()
+        event.accept()
+
+class MarkovChainsMainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Visu(AL)-1 v0.2.0b2 - Markov Chains")
+        self.resize(1280, 720)
+
+        mat = np.array([[0.2, 0.4, 0.3],
+                        [0.5, 0.1, 0.3],
+                        [0.3, 0.5, 0.4]])
+        init = np.array([1, 0, 0])
+
+        viewer = MarkovChainsViewer(mat, init)
+        self.graphViewer = QGraphicsView(viewer)
+        self.graphViewer.setFixedSize(800, 600)
+
+        central = QWidget()
+        self.layout = QGridLayout()
+        timePanel = QWidget()
+        self.timePanelLayout = MarkovChainsTimePanel(viewer)
+        timePanel.setLayout(self.timePanelLayout)
+        sidePanel = QWidget()
+        sidePanelLayout = MarkovChainsSidePanel(self, viewer, timePanel)
+        sidePanel.setLayout(sidePanelLayout)
+        self.layout.addWidget(self.graphViewer, 0, 0)
+        self.layout.addWidget(sidePanel, 0, 1, 2, 1)
+        self.layout.addWidget(timePanel, 1, 0)
+        central.setLayout(self.layout)
+
+        self.setCentralWidget(central)
     
     def closeEvent(self, event):
         self.window = HomeWindow()

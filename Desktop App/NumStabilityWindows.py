@@ -26,6 +26,14 @@ class ErrorWindow(QWidget):
             self.layout.addWidget(QLabel("Matrix has inconsistent dimensions. Please try again."))
         elif type == 99: #Invalid convolution matrix (even dimensions)
             self.layout.addWidget(QLabel("Convolution kernel must have odd dimensions. Please try again."))
+        elif type == 101: #Invalid stochastic matrix and probability vector (wrong shape)
+            self.layout.addWidget(QLabel("Invalid dimensions. Must be n x (n + 1). Please try again."))
+        elif type == 102: #Invalid stochastic matrix and probability vector (negative entries detected)
+            self.layout.addWidget(QLabel("Stochastic matrix and probability vector must have non-negative entries. Please try again."))
+        elif type == 103: #Invalid stochastic matrix and probability vector (zero column detected)
+            self.layout.addWidget(QLabel("Stochastic matrix columns and probability vector must be non-zero. Please try again."))
+        elif type == 104: #Stochastic matrix is bigger than 6x6 (practical limit for visualisation purposes)
+            self.layout.addWidget(QLabel("Visu(AL)-1 currently allows at most 6 states. Please try again."))
         else:
             self.layout.addWidget(QLabel("Unknown error occurred."))
         self.submit = QPushButton("OK")
@@ -111,9 +119,9 @@ class ActionWindow(QWidget):
         rb = self.sender()
         self.pivot = int(rb.objectName())
         if self.pivot:
-            #self.LUBox = QCheckBox("LU Factorisation")
-            #self.LUBox.clicked.connect(self.gaussianLUToggle)
-            #self.valuesLayout.addWidget(self.LUBox)
+            self.LUBox = QCheckBox("LU Factorisation")
+            self.LUBox.clicked.connect(self.gaussianLUToggle)
+            self.valuesLayout.addWidget(self.LUBox)
             pass
         else:
             try:
