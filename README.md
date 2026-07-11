@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.2.0b1**
+**Current version: v0.2.0b2**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -59,6 +59,10 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.2.0b1 -> v0.2.0b2
+- LUP factorisation added for numerical stability
+- DTMC prototype visualisation now available, but many of the buttons do nothing so far
+
 v0.2.0a -> v0.2.0b1
 - Fixed matrix aliasing bug
 - Added reset button so that the DP for calculations can be tweaked without reloading the CSV
