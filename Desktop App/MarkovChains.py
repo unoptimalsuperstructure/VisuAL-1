@@ -5,11 +5,13 @@ import networkx as nx
 import numpy as np
 
 from PyQt6.QtWidgets import *
-from PyQt6.QtGui import QPen, QBrush, QPolygonF, QPainter, QDoubleValidator
-from PyQt6.QtCore import QPointF, Qt, QRectF, pyqtSignal
+from PyQt6.QtGui import QPen, QBrush, QPolygonF, QPainter
+from PyQt6.QtCore import QPointF, Qt, QRectF
 import pyqtgraph as pg
 from MatrixPrinter import *
-import NumStabilityWindows, csv
+import csv
+from MarkovChainsWindows import *
+from scipy.linalg import expm
 
 
 class NodeItem(QGraphicsEllipseItem):
@@ -126,6 +128,7 @@ class MarkovChainsViewer(QGraphicsScene):
         self.state = init
         self.colour = colour
         self.size = size
+        self.isCTMC = False
         positions, textpos = regular_polygon_layout(self.graph.number_of_nodes(), 150 if self.size == 1 else 200, (18, -10))
 
         i = 0
@@ -204,7 +207,7 @@ class MarkovChainsViewer(QGraphicsScene):
             curve.setData(x, np.array(self.hist)[:, i])
     
     def nextState(self):
-        self.state = self.mat @ self.state
+        self.state = expm(0.1 * len(self.hist) * self.mat) @ self.init if self.isCTMC else self.mat @ self.state
         self.hist.append(self.state)
         i, j = 0, 0
         for item in self.items():
@@ -234,29 +237,14 @@ class MarkovChainsViewer(QGraphicsScene):
         self.updateStateVector()
     
     def newStateVector(self):
-        self.d = self.mat.shape[0]
-        self.stateVector = TableWithLeave()
-        self.stateVector.setItemDelegate(NonNegativeDelegate())
-        self.stateVector.setRowCount(self.d)
-        self.stateVector.setColumnCount(1)
-        self.stateVector.setFixedSize(40, 40 * self.d)
-        self.stateVector.verticalHeader().setDefaultSectionSize(40)
-        self.stateVector.horizontalHeader().setDefaultSectionSize(40)
-        self.stateVector.verticalHeader().hide()
-        self.stateVector.horizontalHeader().hide()
-        self.stateVector.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.stateVector.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        for i in range(self.d):
-            self.stateVector.setItem(i, 0, QTableWidgetItem(f"{self.state[i]:.2f}"))
-        self.stateVector.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
-        self.stateVector.setMouseTracking(True)
+        self.stateVector = makeStateVector(self.state, self.colour)
         self.stateVector.cellEntered.connect(self.onHover)
         self.stateVector.mouseLeft.connect(self.onLeave)
     
     def updateStateVector(self):
-        for i in range(self.d):
+        for i in range(len(self.state)):
             self.stateVector.setItem(i, 0, QTableWidgetItem(f"{self.state[i]:.2f}"))
-    
+
     def onHover(self, i, j):
         for index in range(len(self.nodes)):
             self.nodes[index].highlight = (index == i)
@@ -266,23 +254,6 @@ class MarkovChainsViewer(QGraphicsScene):
         for index in range(len(self.nodes)):
             self.nodes[index].highlight = False
             self.nodes[index].update()
-
-class TableWithLeave(QTableWidget):
-    mouseLeft = pyqtSignal()
-
-    def leaveEvent(self, event):
-        self.mouseLeft.emit()
-        super().leaveEvent(event)
-
-class NonNegativeDelegate(QStyledItemDelegate):
-    def createEditor(self, parent, option, index):
-        editor = QLineEdit(parent)
-
-        validator = QDoubleValidator(0.0, 1e100, 10, editor)
-        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
-
-        editor.setValidator(validator)
-        return editor
 
 class MarkovChainsSidePanel(QGridLayout):
     def __init__(self, main, viewer, timePanel, size):
@@ -294,50 +265,87 @@ class MarkovChainsSidePanel(QGridLayout):
         self.matrix = self.viewer.mat
         self.vec = self.viewer.init
         self.size = size
+        self.isCTMC = False
 
         self.tol = 6
 
-        self.addWidget(QLabel("DP for convergence threshold:"), 0, 0, 1, 5)
+        self.addWidget(QLabel("Start time:"), 0, 0, 1, 2)
+        self.startTime = QSpinBox()
+        self.startTime.setRange(0, 100000)
+        self.startTime.setValue(0)
+        self.addWidget(self.startTime, 0, 2)
+        self.addWidget(QLabel("Max duration:"), 0, 3, 1, 2)
+        self.duration = QSpinBox()
+        self.duration.setRange(1, 100000)
+        self.duration.setValue(20)
+        self.addWidget(self.duration, 0, 5)
+        self.addWidget(QLabel("Number of intervals (CTMC only):"), 1, 0, 1, 5)
+        self.intervals = QSpinBox()
+        self.intervals.setRange(10, 1000)
+        self.intervals.setValue(100)
+        self.intervals.setDisabled(True)
+        self.addWidget(self.intervals, 1, 5)
+
+        self.addWidget(QLabel("DP for convergence threshold:"), 2, 0, 1, 5)
         self.tolWheel = QSpinBox()
         self.tolWheel.setValue(6)
         self.tolWheel.setRange(2, 12)
         self.tolWheel.valueChanged.connect(self.setTol)
-        self.addWidget(self.tolWheel, 0, 5)
+        self.addWidget(self.tolWheel, 2, 5)
 
         self.importDTMCButton = QPushButton("Import DTMC CSV")
-        self.importDTMCButton.clicked.connect(self.loadCSV)
+        self.importDTMCButton.clicked.connect(self.loadDTMC)
         self.importCTMCButton = QPushButton("Import CTMC CSV")
+        self.importCTMCButton.clicked.connect(self.loadCTMC)
         self.addMarkovButton = QPushButton("New Markov Chain")
+        self.addMarkovButton.clicked.connect(self.addMarkovWindow)
         self.startResetButton = QPushButton("Start")
         self.startResetButton.clicked.connect(self.start)
 
         self.matrix = self.matrix / np.sum(self.matrix, 0)
         self.vec = self.vec / np.sum(self.vec)
         self.valid = True
-        self.makeTransitionMatrix()
+        self.newTransitionMatrix()
 
         self.conv = QLabel()
 
-        self.addWidget(self.importDTMCButton, 1, 0, 1, 3)
-        self.addWidget(self.importCTMCButton, 1, 3, 1, 3)
-        self.addWidget(self.addMarkovButton, 2, 0, 1, 3)
-        self.addWidget(self.startResetButton, 2, 3, 1, 3)
-        self.addWidget(self.viewer.stateVector, 3, 5)
-        self.addWidget(self.viewer.plot, 4, 0, 1, 6)
-        self.addWidget(self.conv, 5, 0, 1, 6)
+        self.addWidget(self.importDTMCButton, 3, 0, 1, 3)
+        self.addWidget(self.importCTMCButton, 3, 3, 1, 3)
+        self.addWidget(self.addMarkovButton, 4, 0, 1, 3)
+        self.addWidget(self.startResetButton, 4, 3, 1, 3)
+        self.addWidget(self.viewer.stateVector, 5, 5)
+        self.addWidget(self.viewer.plot, 6, 0, 1, 6)
+        self.addWidget(self.conv, 7, 0, 1, 6)
     
+    def addMarkovWindow(self):
+        self.window = AddMarkovWindow(self.viewer.colour)
+        self.window.show()
+        self.window.params.connect(self.addMarkov)
+    
+    def addMarkov(self, params):
+        self.isCTMC = params[2]
+        self.matrix = np.array(params[0])
+        self.viewer.state = np.array(params[1])
+        self.vec = np.array(params[1])
+        makeTransitionMatrix(self.matrix, self.viewer.colour)
+        makeStateVector(self.viewer.state, self.viewer.colour)
+        self.updateMatrix(False, False, False)
+
     def setTol(self, x):
-        self.tol = int(x)
+        self.tol = x
     
     def start(self):
         if self.matrix is not None:
             self.matrix = tableToMatrix(self.transitionMatrix)
             self.vec = tableToMatrix(self.viewer.stateVector)
-            if self.validate(self.matrix, self.vec):
-                self.updateMatrix(True)
+            if self.validate(self.matrix, self.vec, self.isCTMC, False):
+                self.updateMatrix(True, False, False)
                 self.startResetButton.setText("Reset")
                 self.startResetButton.clicked.disconnect(self.start)
                 self.startResetButton.clicked.connect(self.reset)
+                self.startTime.setDisabled(True)
+                self.duration.setDisabled(True)
+                self.intervals.setDisabled(True)
                 self.tolWheel.setDisabled(True)
                 self.importDTMCButton.setDisabled(True)
                 self.importCTMCButton.setDisabled(True)
@@ -350,10 +358,13 @@ class MarkovChainsSidePanel(QGridLayout):
     
     def reset(self):
         if self.matrix is not None:
-            self.updateMatrix(False)
+            self.updateMatrix(False, False, True)
             self.startResetButton.setText("Start")
             self.startResetButton.clicked.disconnect(self.reset)
             self.startResetButton.clicked.connect(self.start)
+            self.startTime.setEnabled(True)
+            self.duration.setEnabled(True)
+            self.intervals.setEnabled(self.isCTMC)
             self.tolWheel.setEnabled(True)
             self.importDTMCButton.setEnabled(True)
             self.importCTMCButton.setEnabled(True)
@@ -364,50 +375,50 @@ class MarkovChainsSidePanel(QGridLayout):
             self.timePanel.layout().pageLabel.setText("t = 0")
             self.timePanel.update()
 
-    def validate(self, mat, init):
+    def validate(self, mat, init, isCTMC, load):
         valid = True
         try:
             self.matrix = np.array(mat)
             self.vec = np.array(init).T
         except:
             valid = False
-            self.error = NumStabilityWindows.ErrorWindow(2, None)
+            self.error = ErrorWindow(2, None)
             self.error.show()
         
-        if self.matrix.shape[0] != self.matrix.shape[1]:
+        if self.matrix.shape[0] != self.matrix.shape[1] + (isCTMC and load):
             valid = False
-            self.error = NumStabilityWindows.ErrorWindow(101, None)
+            self.error = ErrorWindow(101, None)
             self.error.show()
         
         else:
             for col in self.matrix.T:
                 if np.linalg.norm(col) == 0:
                     valid = False
-                    self.error = NumStabilityWindows.ErrorWindow(103, None)
+                    self.error = ErrorWindow(103, None)
                     self.error.show()
-                elif np.min(col) < 0:
+                elif load and np.min(col) < 0:
                     valid = False
-                    self.error = NumStabilityWindows.ErrorWindow(102, None)
+                    self.error = ErrorWindow(102, None)
                     self.error.show()
         
         if valid and np.linalg.norm(self.vec) == 0:
             valid = False
-            self.error = NumStabilityWindows.ErrorWindow(103, None)
+            self.error = ErrorWindow(103, None)
             self.error.show()
         
         if valid and np.min(self.vec) < 0:
             valid = False
-            self.error = NumStabilityWindows.ErrorWindow(102, None)
+            self.error = ErrorWindow(102, None)
             self.error.show()
         
         if valid and self.matrix.size > 36:
             valid = False
-            self.error = NumStabilityWindows.ErrorWindow(104, None)
+            self.error = ErrorWindow(104, None)
             self.error.show()
         
         return valid
     
-    def updateMatrix(self, calc):
+    def updateMatrix(self, calc, load, reset):
         try:
             self.removeWidget(self.viewer.plot)
             self.viewer.plot.deleteLater()
@@ -418,9 +429,33 @@ class MarkovChainsSidePanel(QGridLayout):
         except:
             pass
         finally:
-            self.matrix = self.matrix / np.sum(self.matrix, 0)
+            if self.isCTMC:
+                if load:
+                    d = self.matrix.shape[0]
+                    mat = np.eye(d)
+                    for i in range(d):
+                        k = 0
+                        for j in range(d):
+                            if i == j:
+                                k = 1
+                            else:
+                                mat[i, j] = self.matrix[i, j - k]
+                    for i in range(d):
+                        mat[i, i] = 1 - sum(mat[:, i])
+                    self.matrix = mat
+            else:
+                self.matrix = self.matrix / np.sum(self.matrix, 0)
             self.vec = self.vec / np.sum(self.vec)
-            self.viewer = MarkovChainsViewer(self.matrix, self.vec, self.viewer.colour, self.size)
+            v = self.vec.copy()
+            if not reset:
+                if self.isCTMC:
+                    v = expm(self.startTime.value() * self.matrix) @ v
+                else:
+                    for i in range(self.startTime.value()):
+                        v = self.matrix @ v
+            self.viewer = MarkovChainsViewer(self.matrix, v, self.viewer.colour, self.size)
+            self.viewer.isCTMC = self.isCTMC
+            self.intervals.setEnabled(self.isCTMC)
             newViewer = QGraphicsView(self.viewer)
             dim = 420 if self.size == 1 else 600
             newViewer.setFixedSize(dim, dim)
@@ -429,26 +464,61 @@ class MarkovChainsSidePanel(QGridLayout):
             self.main.graphViewer = newViewer
             oldViewer.deleteLater()
             self.main.timePanelLayout.newViewer(self.viewer)
-            self.makeTransitionMatrix()
+            self.newTransitionMatrix()
             self.viewer.newStateVector()
-            self.addWidget(self.viewer.stateVector, 3, 5)
-            self.addWidget(self.viewer.plot, 4, 0, 1, 6)
+            self.addWidget(self.viewer.stateVector, 5, 5)
+            self.addWidget(self.viewer.plot, 6, 0, 1, 6)
 
-            temp = self.vec.copy()
-            self.conv = QLabel("Did not converge within 100 steps" if calc else "")
+            s = self.startTime.value()
+            temp = (expm(s * self.matrix) if self.isCTMC else np.linalg.matrix_power(self.matrix, s)) @ self.vec.copy()
+            self.conv = QLabel("")
             if calc:
-                self.timePanel.layout().maxSteps = 99
-                for i in range(100):
-                    temp2 = self.matrix @ temp
-                    if np.linalg.norm(temp2 - temp) < 10 ** -self.tol:
-                        self.conv = QLabel(f"Converged after {i + 1} steps")
-                        self.timePanel.layout().maxSteps = i
-                        break
-                    temp = temp2
+                d = self.duration.value()
+                r = self.intervals.value()
+                self.conv = QLabel(f"Did not converge within {r if self.isCTMC else d} steps")
+                self.timePanel.layout().maxSteps = r - 1 if self.isCTMC else d - 1
+                if self.isCTMC:
+                    self.limit = self.matrix.copy()
+                    t = 1.0
+                    while True:
+                        self.limit = expm(self.matrix * t)
+                        P = expm(self.matrix * (2 * t))
+                        if np.allclose(self.limit, P, rtol=1e-12, atol=1e-15):
+                            break
+                        t *= 2
+                    base = self.vec.copy()
+                    final = self.limit @ base
+                    for i in range(1, r + 1):
+                        temp = expm((s + i * d / r) * self.matrix) @ base
+                        if np.linalg.norm(temp - final, np.inf) < 10 ** -self.tol:
+                            self.conv = QLabel(f"Converged after {i} steps")
+                            self.timePanel.layout().maxSteps = i - 1
+                            break
+                else:
+                    def conv(P):
+                        for lam in np.linalg.eigvals(P):
+                            if abs(abs(lam) - 1) < 1e-10 and abs(lam - 1) > 1e-10:
+                                return False
+                        return True
+                    if conv(self.matrix):
+                        self.limit = self.matrix.copy()
+                        while True:
+                            lim = self.limit @ self.limit
+                            if np.allclose(lim, self.limit, rtol=1e-12, atol=1e-15):
+                                break
+                            self.limit = lim
+                        final = self.limit @ self.vec.copy()
+                        for i in range(s, d + s):
+                            temp2 = self.matrix @ temp
+                            if np.linalg.norm(temp2 - final, np.inf) < 10 ** -self.tol:
+                                self.conv = QLabel(f"Converged after {i - s + 1} steps")
+                                self.timePanel.layout().maxSteps = i - s
+                                break
+                            temp = temp2
             
-                self.addWidget(self.conv, 5, 0)
+                self.addWidget(self.conv, 7, 0, 1, 6)
 
-    def loadCSV(self):
+    def loadCSV(self, isCTMC):
         file_path = QFileDialog.getOpenFileName(
             None,
             "Select CSV File",
@@ -472,45 +542,50 @@ class MarkovChainsSidePanel(QGridLayout):
                     init.append(entries[-1])
                 except:
                     valid = False
-                    self.error = NumStabilityWindows.ErrorWindow(1, None)
+                    self.error = ErrorWindow(1, None)
                     self.error.show()
                     break
         
-        if valid and self.validate(mat, init):
-            self.updateMatrix(False)
+        if valid and self.validate(mat, init, isCTMC, True):
+            self.isCTMC = isCTMC
+            self.updateMatrix(False, True, False)
     
-    def makeTransitionMatrix(self):
+    def loadDTMC(self):
+        self.loadCSV(False)
+    
+    def loadCTMC(self):
+        self.loadCSV(True)
+    
+    def newTransitionMatrix(self):
         try:
             self.removeWidget(self.transitionMatrix)
             self.transitionMatrix.deleteLater()
         except:
             pass
-        self.d = self.matrix.shape[0]
-        self.transitionMatrix = TableWithLeave()
-        self.transitionMatrix.setItemDelegate(NonNegativeDelegate())
-        self.transitionMatrix.setRowCount(self.d)
-        self.transitionMatrix.setColumnCount(self.d)
-        states = ["A", "B", "C", "D", "E", "F"][:self.d]
-        self.transitionMatrix.setVerticalHeaderLabels(states)
-        self.transitionMatrix.setHorizontalHeaderLabels(states)
-        self.transitionMatrix.verticalHeader().setDefaultSectionSize(40)
-        self.transitionMatrix.horizontalHeader().setDefaultSectionSize(40)
-        self.transitionMatrix.setFixedSize(40 * self.d + 20, 40 * self.d + 25)
-        self.transitionMatrix.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.transitionMatrix.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.transitionMatrix.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.transitionMatrix.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        for i in range(self.d):
-            for j in range(self.d):
-                self.transitionMatrix.setItem(i, j, QTableWidgetItem(f"{self.matrix[i, j]:.2f}"))
-        self.transitionMatrix.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
-        self.transitionMatrix.setMouseTracking(True)
+        self.transitionMatrix = makeTransitionMatrix(self.matrix, self.viewer.colour)
+        if self.isCTMC:
+            self.transitionMatrix.itemChanged.connect(self.CTMCUpdate)
+            for i in range(self.matrix.shape[0]):
+                item = self.transitionMatrix.item(i, i)
+                item.setBackground(QColor("#505050" if self.viewer.colour else "#E0E0E0"))
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+
         self.transitionMatrix.cellEntered.connect(self.onHover)
         self.transitionMatrix.mouseLeft.connect(self.onLeave)
-        self.addWidget(self.transitionMatrix, 3, 0, 1, 5)
+        self.addWidget(self.transitionMatrix, 5, 0, 1, 5)
+    
+    def CTMCUpdate(self, item):
+        self.transitionMatrix.blockSignals(True)
+        for i in range(self.matrix.shape[0]):
+            total = 0
+            for j in range(self.matrix.shape[0]):
+                if i != j:
+                    total += float(self.transitionMatrix.item(j, i).text())
+            self.transitionMatrix.item(i, i).setText(f"{-total:.3f}")
+        self.transitionMatrix.blockSignals(False)
     
     def onHover(self, i, j):
-        k = self.d * j + i
+        k = self.matrix.shape[0] * j + i
         index = 0
         for index in range(len(self.viewer.edges)):
             self.viewer.edges[index].highlight = (index == k)
@@ -544,7 +619,7 @@ class MarkovChainsTimePanel(QHBoxLayout):
         self.viewer = viewer
         self.t = 0
         self.update()
-    
+
     def prevPage(self):
         if self.t > 0:
             self.t -= 1

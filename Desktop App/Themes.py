@@ -8,7 +8,15 @@ QLabel {
     color: #000000;
 }
 
-QPushButton {
+QSpinBox {
+    background-color: #eeeeee;
+}
+
+QSpinBox:disabled {
+    background-color: #c0c0c0;
+}
+
+QPushButton, QLineEdit {
     background-color: #eeeeee;
     color: black;
     border: 1px solid #aaaaaa;
@@ -39,6 +47,17 @@ QTableWidget {
     color: black;
     gridline-color: #cccccc;
 }
+
+QTableWidget::item:selected {
+    background: #e0e0e0;
+    color: black;
+}
+
+QHeaderView::section, QTableCornerButton::section {
+    background-color: #eeeeee;
+    color: black;
+    border: 1px solid #cccccc;
+}
 """
 
 DARK_THEME = """
@@ -51,7 +70,15 @@ QLabel {
     color: #ffffff;
 }
 
-QPushButton {
+QSpinBox {
+    background-color: #505050;
+}
+
+QSpinBox:disabled {
+    background-color: #303030;
+}
+
+QPushButton, QLineEdit {
     background-color: #505050;
     color: white;
     border: 1px solid #777777;
@@ -81,5 +108,16 @@ QTableWidget {
     background-color: #252525;
     color: white;
     gridline-color: #555555;
+}
+
+QTableWidget::item:selected {
+    background: #404040;
+    color: white;
+}
+
+QHeaderView::section, QTableCornerButton::section {
+    background-color: #2b2b2b;
+    color: white;
+    border: 1px solid #555555;
 }
 """

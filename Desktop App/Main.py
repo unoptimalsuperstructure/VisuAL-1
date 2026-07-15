@@ -19,6 +19,7 @@ theme = int(f2.readline())
 f2.close()
 
 app = QApplication(sys.argv)
+app.setStyle("Fusion")
 
 class HomeBar(QHBoxLayout):
     def __init__(self):
@@ -127,7 +128,7 @@ class HomeWindow(QMainWindow):
 
         app.setStyleSheet(LIGHT_THEME if theme == 0 else DARK_THEME)
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1a - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Home")
         if size == 1:
             self.resize(800, 600 - 30)
         elif size == 2:
@@ -192,7 +193,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1a - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1b - 2D Image Processing")
         self.viewer = TwoDViewer([Image(resource_path("static/kagura.png"), size)], size)
         if size == 1:
             self.resize(800, 600 - 30)
@@ -244,7 +245,7 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1a - 3D Visualiser")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1b - 3D Visualiser")
         self.viewer = ThreeDViewer(shapes, linesPlanes, namespace)
         if size == 1:
             self.resize(800, 600 - 30)
@@ -387,7 +388,7 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1a - Numerical Stability")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Numerical Stability")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -423,7 +424,7 @@ class MarkovChainsMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1a - Markov Chains")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Markov Chains")
         mat = np.array([[0.2, 0.4, 0.3],
                         [0.5, 0.1, 0.3],
                         [0.3, 0.5, 0.4]])
