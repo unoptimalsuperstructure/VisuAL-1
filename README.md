@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.2.1a**
+**Current version: v0.2.1b**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -59,6 +59,11 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.2.1a -> v0.2.1b
+- Fixed premature DTMC convergence issue
+- Added CTMCs
+- Minor stylesheet changes
+
 v0.2.0b2 -> v0.2.1a
 - Native light and dark themes now available
 - Fixed DTMC prototype visualisation bugs
