@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Numerical Stability and Solver</title>
+  <link rel="stylesheet" href="../Shared/BaseStyle.css"/>
+  <link rel="stylesheet" href="numstab.css"/>
+  <link rel="stylesheet" href="../Shared/tooltip.css"/>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">Milestone 3</div>
+  <div class="spacer"></div>
+  <a class="topbar-back" href="../Home.html">← Home</a>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+
+    <div class="section">
+      <div class="section-head">Numerical Stability</div>
+      <div class="section-body">
+        <div class="field-row">
+          <label data-tip="Decimals shown in the matrix display — cosmetic only, never affects the arithmetic.">display dp</label>
+          <input type="number" id="ns-display-acc" min="2" max="12" value="6" style="width:64px;flex:none"/>
+        </div>
+        <div class="field-row">
+          <label data-tip="Decimals kept in every intermediate Gram-Schmidt result — this DOES change the arithmetic. Lower it to simulate low-precision hardware and watch orthogonality degrade. Locked while results are shown; Reset to unlock.">calc dp</label>
+          <input type="number" id="ns-calc-acc" min="2" max="16" value="16" style="width:64px;flex:none"/>
+        </div>
+
+        <div class="section-label" style="margin-top:10px">Data</div>
+        <label class="btn" for="ns-csv"><span class="btn-icon">＋</span> Import CSV…</label>
+        <input type="file" id="ns-csv" accept=".csv,text/csv" hidden/>
+        <button class="btn" id="btn-ns-generate" data-tip="Random entries, or a Hilbert matrix — the classic ill-conditioned example that breaks Gram-Schmidt at low precision.">Generate data…</button>
+        <div id="ns-summary" style="font-size:11px;color:var(--muted);margin:6px 0"></div>
+
+        <div class="section-label" style="margin-top:10px">Run</div>
+        <button class="btn primary" id="btn-ns-action" disabled data-tip="Gaussian elimination (± partial pivoting) or the Gram-Schmidt process (classical vs modified), stepped through one row operation at a time.">Action…</button>
+        <button class="btn danger" id="btn-ns-reset" disabled data-tip="Back to the loaded matrix; unlocks the calculation precision.">Reset</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="viewport" class="ns-viewport">
+    <div id="ns-empty" class="ns-empty">Import a CSV or generate a matrix to begin.</div>
+    <div class="ns-cols">
+      <div class="ns-left">
+        <pre id="ns-matrix" class="matrix ns-matrix" style="display:none"></pre>
+        <div id="ns-op" class="ns-op"></div>
+        <div id="ns-pager" class="ns-pager" style="display:none">
+          <button class="btn" id="btn-ns-prev">‹ Prev</button>
+          <span id="ns-page-label"></span>
+          <button class="btn" id="btn-ns-next">Next ›</button>
+        </div>
+        <div id="ns-soln" class="ns-soln" style="display:none"></div>
+      </div>
+      <div class="ns-right">
+        <canvas id="ns-viz" class="ns-viz" style="display:none"
+                data-tip="Grey arrows: your original vectors. Coloured: the working set. On each subtraction step the dashed purple arrow is the projection just removed — the classic right-triangle construction."></canvas>
+        <div id="ns-viz-note" class="ns-viz-note" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- generate-data modal -->
+<div class="modal-bg" id="ns-gen-modal" style="display:none">
+  <div class="modal">
+    <h3>Generate Data</h3>
+    <label class="type-opt"><input type="radio" name="ns-gen" value="random" checked/>
+      <span data-tip="Uniform entries in [−10, 10], 2 dp.">Random matrix</span></label>
+    <label class="type-opt"><input type="radio" name="ns-gen" value="hilbert"/>
+      <span data-tip="H[i][j] = 1/(i+j+1). Condition number explodes with n — feed it to classical Gram-Schmidt at low calc dp and the verdict goes red.">Hilbert matrix (ill-conditioned)</span></label>
+    <div id="ns-gen-size-row">
+      <div class="field-row">
+        <label style="width:auto;min-width:64px">row:</label>
+        <input type="number" id="ns-gen-rows" min="1" max="10" value="4" style="width:56px;flex:none"/>
+      </div>
+      <div class="field-row">
+        <label style="width:auto;min-width:64px">column:</label>
+        <input type="number" id="ns-gen-cols" min="1" max="10" value="4" style="width:56px;flex:none"/>
+      </div>
+    </div>
+    <div class="field-row" id="ns-gen-n-row" style="display:none">
+      <label>n</label>
+      <input type="number" id="ns-gen-n" min="2" max="10" value="5" style="width:56px;flex:none"/>
+    </div>
+    <div class="error-msg" id="ns-gen-err"></div>
+    <div class="modal-actions">
+      <button class="btn" id="ns-gen-cancel">Cancel</button>
+      <button class="btn primary" id="ns-gen-apply">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- action modal -->
+<div class="modal-bg" id="ns-action-modal" style="display:none">
+  <div class="modal">
+    <h3>Select an Action</h3>
+    <label class="type-opt"><input type="radio" name="ns-action" value="gauss" checked/>
+      <span data-tip="Row-reduce the matrix (last column treated as the RHS of Ax = b), then back-substitute — free variables appear as t1, t2, …">Gaussian Elimination</span></label>
+    <label class="type-opt"><input type="radio" name="ns-action" value="gs"/>
+      <span data-tip="Orthogonalise the ROWS as vectors v1…vn. The verdict measures ‖QQᵀ − I‖_F of the result.">Gram-Schmidt Process</span></label>
+    <label class="type-opt"><input type="radio" name="ns-action" value="lu"/>
+      <span data-tip="Factor PA = LU with partial pivoting: U from the elimination steps, L collects the multipliers ℓᵢⱼ, P records the row swaps. Square matrices only.">LU decomposition (PA = LU)</span></label>
+    <label class="type-opt"><input type="radio" name="ns-action" value="invert"/>
+      <span data-tip="Gauss–Jordan on [A | I]: row-reduce until the left half is I and the right half is A⁻¹. Detects singular matrices. Square only.">Matrix inverse</span></label>
+    <label class="type-opt"><input type="radio" name="ns-action" value="diag"/>
+      <span data-tip="A = PDP⁻¹. Symmetric input uses Jacobi (always diagonalisable); otherwise QR eigenvalues — reports 'not diagonalisable over ℝ' for complex eigenvalues and detects defective matrices (eigenspace smaller than multiplicity). Square only.">Diagonalisation (A = PDP⁻¹)</span></label>
+
+    <div id="ns-gauss-fields" style="margin-top:8px">
+      <label class="type-opt"><input type="radio" name="ns-pivot" value="0" checked/>
+        <span data-tip="Use the first nonzero entry as the pivot — simple, but dividing by a tiny pivot amplifies rounding error.">No pivoting</span></label>
+      <label class="type-opt"><input type="radio" name="ns-pivot" value="1"/>
+        <span data-tip="Swap up the row with the largest |entry| first: every multiplier stays ≤ 1, keeping the elimination stable.">Partial pivoting</span></label>
+    </div>
+
+    <div id="ns-gs-fields" style="margin-top:8px;display:none">
+      <label class="type-opt"><input type="radio" name="ns-gs" value="0" checked/>
+        <span data-tip="All projections of vᵢ are computed from the ORIGINAL vector before any subtraction — rounding errors in early u's contaminate every later step (error ~ κ²ε).">Classical Gram-Schmidt</span></label>
+      <label class="type-opt"><input type="radio" name="ns-gs" value="1"/>
+        <span data-tip="Each projection uses the already-cleaned vector, so errors don't compound (error ~ κε). Same maths on paper — different arithmetic in floating point.">Modified Gram-Schmidt</span></label>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted)">Vectors are the matrix's…</div>
+      <label class="type-opt"><input type="radio" name="ns-gs-vec" value="rows" checked/>
+        <span data-tip="Each ROW of the matrix is one vector v₁…vₙ.">Rows</span></label>
+      <label class="type-opt"><input type="radio" name="ns-gs-vec" value="cols"/>
+        <span data-tip="Each COLUMN is one vector — the matrix is transposed before orthogonalising.">Columns</span></label>
+      <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin-top:6px">
+        <input type="checkbox" id="ns-gs-norm"/> Show normalisation steps
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="ns-action-cancel">Cancel</button>
+      <button class="btn primary" id="ns-action-apply">Run</button>
+    </div>
+  </div>
+</div>
+
+<script src="../Shared/PrintMatrix.js"></script>
+<script src="../Shared/CSVParser.js"></script>
+<script src="../Shared/tooltip.js"></script>
+<script src="numstab.js"></script>
+<script src="visualisation.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
