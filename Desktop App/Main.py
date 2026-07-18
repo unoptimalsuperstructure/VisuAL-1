@@ -1,9 +1,10 @@
-import os, sys, subprocess
+import os, sys
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPixmap, QAction
 from PyQt6.QtCore import QEvent, Qt
 from TwoDImages import TwoDViewer, TwoDSidePanel
 from ThreeDGraphics import ThreeDViewer, ThreeDSidePanel
+from ThreeDWindows import ErrorWindow
 from NumStabilityAlgos import NumStabilityViewer, NumStabilitySidePanel
 from MarkovChains import MarkovChainsViewer, MarkovChainsSidePanel, MarkovChainsTimePanel
 from Images import Image
@@ -20,6 +21,16 @@ f2.close()
 
 app = QApplication(sys.argv)
 app.setStyle("Fusion")
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 class HomeBar(QHBoxLayout):
     def __init__(self):
@@ -92,7 +103,7 @@ class OptionPanel(QVBoxLayout):
         self.mainWindow.close()
 
     def ThreeDee(self):
-        self.newWindow = ThreeDMainWindow([], [], [])
+        self.newWindow = ThreeDMainWindow(False, [], [], [])
         self.newWindow.show()
         self.mainWindow.close()
     
@@ -128,7 +139,7 @@ class HomeWindow(QMainWindow):
 
         app.setStyleSheet(LIGHT_THEME if theme == 0 else DARK_THEME)
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Home")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1c - Home")
         if size == 1:
             self.resize(800, 600 - 30)
         elif size == 2:
@@ -193,7 +204,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1b - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1c - 2D Image Processing")
         self.viewer = TwoDViewer([Image(resource_path("static/kagura.png"), size)], size)
         if size == 1:
             self.resize(800, 600 - 30)
@@ -242,11 +253,11 @@ class TwoDMainWindow(QMainWindow):
         event.accept()
 
 class ThreeDMainWindow(QMainWindow):
-    def __init__(self, shapes, linesPlanes, namespace):
+    def __init__(self, new, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1b - 3D Visualiser")
-        self.viewer = ThreeDViewer(shapes, linesPlanes, namespace)
+        self.setWindowTitle("Visu(AL)-1 v0.2.1c - 3D Visualiser")
+        self.viewer = ThreeDViewer(new, shapes, linesPlanes, namespace)
         if size == 1:
             self.resize(800, 600 - 30)
             self.viewer.setFixedSize(560, 420)
@@ -297,28 +308,32 @@ class ThreeDMainWindow(QMainWindow):
             "",
             "JSON File (*.json)"
         )[0]
+        self.error = ErrorWindow(999, self)
         if file_path:
-            with open(file_path, "r") as file:
-                dics = json.load(file)
-            initShapes = []
-            initLinesPlanes = []
-            i = 0
-            for j in range(len(dics) - 1):
-                obj = None
-                while not obj:
+            self.viewer.conn.close()
+            try:
+                with open(file_path, "r") as file:
+                    dics = json.load(file)
+                initShapes = []
+                initLinesPlanes = []
+                i = 0
+                for j in range(len(dics) - 1):
                     obj = dics[j].get(str(i))
-                    if obj and "Line" in obj['name']:
+                    if obj is None:
+                        print(1/0)
+                    elif obj and "Line" in obj['name']:
                         initLinesPlanes.append(Shapes.Line(obj['a1'], obj['a2'], obj['a3'], obj['d1'], obj['d2'], obj['d3']))
                     elif obj and "Plane" in obj['name']:
                         initLinesPlanes.append(Shapes.Plane(obj['a'], obj['b'], obj['c'], obj['d']))
                     elif obj:
                         initShapes.append(Shapes.Solid(obj['name'], obj['vertices'], obj['edges'], obj['surfaces'], obj['params']))
                     i += 1
-            
-            self.newWindow = ThreeDMainWindow(initShapes, initLinesPlanes, dics[-1]['namespace'])
-            self.newWindow.show()
-            self.openMainWindowOnClose = False
-            self.close()
+                self.newWindow = ThreeDMainWindow(True, initShapes, initLinesPlanes, dics[-1]['namespace'])
+                self.newWindow.show()
+                self.openMainWindowOnClose = False
+                self.close()
+            except:
+                self.error.show()
 
     def save(self):
         data = []
@@ -365,7 +380,7 @@ class ThreeDMainWindow(QMainWindow):
         )[0]
         if file_path:
             with open(file_path, "w") as f:
-                json.dump(data, f, indent=4)
+                json.dump(data, f, indent=4, cls=NumpyEncoder)
 
     def resizeEvent(self, event):
         if size == 3 or size == 4:
@@ -380,6 +395,7 @@ class ThreeDMainWindow(QMainWindow):
     
     def closeEvent(self, event):
         if self.openMainWindowOnClose:
+            self.viewer.conn.close()
             self.window = HomeWindow()
             self.window.show()
         event.accept()
@@ -388,7 +404,7 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Numerical Stability")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1c - Numerical Stability")
         self.resize(1280, 720)
 
         central = QWidget()
@@ -424,7 +440,7 @@ class MarkovChainsMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1b - Markov Chains")
+        self.setWindowTitle("Visu(AL)-1 v0.2.1c - Markov Chains")
         mat = np.array([[0.2, 0.4, 0.3],
                         [0.5, 0.1, 0.3],
                         [0.3, 0.5, 0.4]])
@@ -472,6 +488,13 @@ class SettingsWindow(QMainWindow):
         self.darkTheme = theme
         self.curSize = size
 
+        def Line():
+            line = QFrame()
+            line.setFrameShape(QFrame.Shape.HLine)
+            line.setFrameShadow(QFrame.Shadow.Sunken)
+            line.setStyleSheet(f"background-color: {"#c0c0c0" if theme else "#000000"};")
+            return line
+
         self.setWindowTitle("Settings")
         
         central = QWidget()
@@ -492,13 +515,20 @@ class SettingsWindow(QMainWindow):
             self.dark.setChecked(True)
         self.mainLayout.addWidget(self.light, 0, 2)
         self.mainLayout.addWidget(self.dark, 0, 3)
+        self.mainLayout.addWidget(Line(), 1, 0, 1, 4)
 
-        self.mainLayout.addWidget(QLabel("Config size:"), 1, 0, 1, 2)
+        self.mainLayout.addWidget(QLabel("Reset 3D Sandbox Database"), 2, 0)
+        self.mainLayout.addWidget(QLabel("<i>Warning: Will delete all custom shapes!</i>"), 3, 0, 1, 3)
+        self.check = QCheckBox("Reset")
+        self.mainLayout.addWidget(self.check, 3, 3)
+        self.mainLayout.addWidget(Line(), 4, 0, 1, 4)
+
+        self.mainLayout.addWidget(QLabel("Config size:"), 5, 0, 1, 3)
         self.sizeBox = QSpinBox()
         self.sizeBox.setRange(1, 4)
         self.sizeBox.setValue(size)
         self.sizeBox.valueChanged.connect(self.setSize)
-        self.mainLayout.addWidget(self.sizeBox, 1, 2, 1, 2)
+        self.mainLayout.addWidget(self.sizeBox, 5, 3)
         self.mainLayout.addWidget(QLabel("Configure the default window size for Visu(AL)-1 depending on your display resolution.\n" \
                                          "Currently only supported for 3D Visualiser and 2D Image Processing.\n\n" \
                                          "Size 1: Use this for 800x600 displays. Preview panels will be sized to 560x420.\n" \
@@ -506,10 +536,10 @@ class SettingsWindow(QMainWindow):
                                          "Size 3: Suitable for displays 1280x720 or larger. 2D image processing panel will be\n" \
                                          "sized to 960x540, and 3D graphics has no theoretical limit.\n" \
                                          "Size 4: Enable high-definition image previews for 2D image processing; preview panel will be\n" \
-                                         "sized to 1600x900. Warning: Higher memory load and requires a 1920x1080 or larger display."), 2, 0, 1, 4)
+                                         "sized to 1600x900. Warning: Higher memory load and requires a 1920x1080 or larger display."), 6, 0, 1, 4)
         self.submit = QPushButton("Save")
         self.submit.clicked.connect(self.updateSize)
-        self.mainLayout.addWidget(self.submit, 3, 0, 1, 4)
+        self.mainLayout.addWidget(self.submit, 7, 0, 1, 4)
     
     def setSize(self):
         self.curSize = self.sizeBox.value()
@@ -535,6 +565,11 @@ class SettingsWindow(QMainWindow):
             global size, theme
             size = self.curSize
             theme = self.darkTheme
+            if self.check.isChecked():
+                try:
+                    os.remove(resource_path("static/geometry.db"))
+                except:
+                    pass
             self.window = HomeWindow()
             self.window.show()
             self.home.close()

@@ -32,6 +32,8 @@ class ErrorWindow(QWidget):
             self.layout.addWidget(QLabel("Name must be non-empty and alphanumeric only. Please try again."))
         elif type == 5:
             self.layout.addWidget(QLabel("This name is already in use. Please try again."))
+        elif type == 999:
+            self.layout.addWidget(QLabel("Malformed JSON. Please try again."))
         else:
             self.layout.addWidget(QLabel("Unknown error occurred."))
         self.submit = QPushButton("OK")
@@ -1050,9 +1052,9 @@ class AddShapeWindow(QWidget):
 
         self.buttons = []
 
-        for solid in solids:
-            button = QRadioButton(solid["name"])
-            button.type = solid["name"]
+        for name in solids:
+            button = QRadioButton(name)
+            button.type = name
             button.toggled.connect(self.onToggle)
             selectShapeLayout.addWidget(button)
             self.buttons.append(button)
@@ -1095,6 +1097,10 @@ class AddShapeWindow(QWidget):
                 self.submit = QPushButton("Submit")
                 self.submit.clicked.connect(self.send)
                 self.delLater = QPushButton("Delete")
+                if self.item in ["Cube", "Tetrahedron"]:
+                    self.delLater.setDisabled(True)
+                else:
+                    self.delLater.setEnabled(True)
                 self.delLater.clicked.connect(self.delete)
                 self.layout.addWidget(self.lab, 2, 0, 1, 2)
 
@@ -1191,9 +1197,10 @@ class CustomPolygonWindow(QWidget):
 
         self.layout.addWidget(QLabel("Select a polygon, or create a new one:"), 0, 0, 1, 6)
 
-        for poly in polygons:
-            button = QRadioButton(poly["name"])
-            button.type = [Shapes.Polygon(poly["name"], poly["vertices"], poly["edges"], poly["normal"]), None, False]
+        for name in polygons:
+            poly = polygons[name]
+            button = QRadioButton(name)
+            button.type = [Shapes.Polygon(name, poly["vertices"], poly["edges"], poly["normal"]), None, False]
             button.toggled.connect(self.onToggle)
             selectPolygonLayout.addWidget(button)
             self.buttons.append(button)
