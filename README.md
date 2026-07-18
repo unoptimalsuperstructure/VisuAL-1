@@ -6,14 +6,20 @@ Multi-purpose tool for visualising the applications of linear algebra, such as i
 # License
 As all of the libraries that this tool uses are licensed under GPLv3 (or more permissive licenses), this tool is also licensed under GPLv3.
 
-# Python Libraries required
+# Python Version and Libraries required
+Python version 3.12 and above is required, along with the following libraries:
+- NetworkX
 - NumPy
 - OpenCV-Python
-- PyMongo
 - PyOpenGL
 - PyQt6 (NOT PySide6)
 - qimage2ndarray
+- SciPy
 - SymPy
+
+Assuming you have pip installed, the pip command to install all of the above libraries is:
+
+<code>pip install networkx numpy opencv-python pyopengl pyqt6 qimage2ndarray scipy sympy</code>
 
 # 2D Image Processing
 
@@ -50,6 +56,10 @@ Web App Controls (Spherical Coordinates):
 - Middle Click to reset the camera view to default position.
 
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
+
+# Markov Chains
+
+Features: Import a CSV of a transition matrix (DTMC) or Q-matrix (CTMC), or form your own matrix and initial distribution vector. Then, visualise the movement through the graph (nodes and edges), and see the changes over time in the line graph.
 
 # Known Bugs
 ## High Priority
