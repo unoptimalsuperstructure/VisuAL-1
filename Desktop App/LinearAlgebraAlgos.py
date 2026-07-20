@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap
 
 #np.set_printoptions(suppress=True)
 
-def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
+def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool, acc: int):
     global hist
     global norm
     if mat.dtype != 'float64':
@@ -76,6 +76,7 @@ def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool):
         for k in range(1, mat.shape[0]):
             coeff = mat[k,i]/mat[0,i]
             mat[k] -= coeff * mat[0]
+            mat[k] = np.round(mat[k], acc)
             global norm
             if abs(mat[k,i]) < (10 ** -6) * norm:
                 mat[k,i] = 0
@@ -114,8 +115,8 @@ def findPivots(mat: np.array, lst: list):
         lst.append(int(nonzeros[0]))
         return findPivots(mat[1:], lst)
 
-def GaussianSolve(mat: np.array, pivot: bool, enableLU: bool):
-    mat = GaussianEliminate(mat, pivot, enableLU)[0]
+def GaussianSolve(mat: np.array, pivot: bool, enableLU: bool, acc: int):
+    mat = GaussianEliminate(mat, pivot, enableLU, acc)[0]
     pivots, nonpivots = findPivots(mat, [])
     if mat.shape[1] - 1 in pivots:
         return "No solution"
@@ -146,6 +147,36 @@ def GaussianSolve(mat: np.array, pivot: bool, enableLU: bool):
             except:
                 res.append(sp.nan)
         return res
+
+def GaussJordan(A: np.array, pivot: bool, acc: int):
+    mat, hist = GaussianEliminate(A, pivot, False, acc)
+    rows, cols = mat.shape
+    for i in range(rows - 1, -1, -1):
+        for j in range(cols):
+            if abs(mat[i, j]) > 1e-12:
+                mat[i] /= mat[i, j]
+                mat[i] = np.round(mat[i], acc)
+                hist.append([mat.copy(), f"R{i + 1} = {round(1/mat[i, j], 3)} * R{i + 1}"])
+                break
+    for i in range(rows - 1, 0, -1):
+        if np.linalg.norm(mat[i]) > 1e-12:
+            for j in range(cols - 1):
+                if abs(mat[i, j] - 1) < 1e-12:
+                    for k in range(i, 0, -1):
+                        val = mat[k - 1, j]
+                        mat[k - 1] -= val * mat[i]
+                        mat[k - 1] = np.round(mat[k - 1], acc)
+                        hist.append([mat.copy(), f"R{k} {"-" if val >= 0 else "+"} {abs(val)}R{i + 1}"])
+    return mat, hist
+
+def GJInverse(A: np.array, pivot: bool, acc: int):
+    if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
+        return [None]*4
+    mat, hist = GaussJordan(np.block([A, np.eye(A.shape[0])]), pivot, acc)
+    iden = np.linalg.norm(mat[:, :A.shape[0]] - np.eye(A.shape[0]), "fro")
+    norm = np.linalg.norm(A @ mat[:, A.shape[0]:] - np.eye(A.shape[0]), "fro")
+    cond = np.linalg.cond(A, "fro")
+    return hist, iden, norm, cond
 
 def proj(u: np.array, v: np.array, acc: int): # Projection of u onto v
     temp = round(np.dot(u, v), acc)

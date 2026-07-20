@@ -85,7 +85,9 @@ class NumStabilitySidePanel(QGridLayout):
             try:
                 self.viewer.layout.removeWidget(self.op)
                 self.viewer.layout.removeWidget(self.pageView)
-                self.viewer.layout.removeWidget(self.soln)
+                self.viewer.layout.removeWidget(self.soln1)
+                self.viewer.layout.removeWidget(self.soln2)
+                self.viewer.layout.removeWidget(self.soln3)
             except:
                 pass
             
@@ -94,8 +96,8 @@ class NumStabilitySidePanel(QGridLayout):
             self.pageView = self.pageLoader()
             self.viewer.layout.addWidget(self.pageView)
 
-            self.soln = QLabel()
-            self.viewer.layout.addWidget(self.soln)
+            self.soln1 = QLabel()
+            self.viewer.layout.addWidget(self.soln1)
 
     def loadCSV(self):
         file_path = QFileDialog.getOpenFileName(
@@ -148,7 +150,9 @@ class NumStabilitySidePanel(QGridLayout):
             try:
                 self.viewer.layout.removeWidget(self.op)
                 self.viewer.layout.removeWidget(self.pageView)
-                self.viewer.layout.removeWidget(self.soln)
+                self.viewer.layout.removeWidget(self.soln1)
+                self.viewer.layout.removeWidget(self.soln2)
+                self.viewer.layout.removeWidget(self.soln3)
             except:
                 pass
             
@@ -159,8 +163,8 @@ class NumStabilitySidePanel(QGridLayout):
             self.pageView = self.pageLoader()
             self.viewer.layout.addWidget(self.pageView)
 
-            self.soln = QLabel()
-            self.viewer.layout.addWidget(self.soln)
+            self.soln1 = QLabel()
+            self.viewer.layout.addWidget(self.soln1)
             
     def pageLoader(self):
         self.pageLayout = QHBoxLayout()
@@ -220,42 +224,83 @@ class NumStabilitySidePanel(QGridLayout):
         if self.matrix is None:
             return
         self.calculationAccWheel.setDisabled(True)
+        try:
+            self.viewer.layout.removeWidget(self.soln2)
+            self.viewer.layout.removeWidget(self.soln3)
+        except:
+            pass
         if val == 1:
             pivot, enableLU = params[1:]
             self.asMatrix = True
-            final, self.hist = GaussianEliminate(self.matrix.copy(), pivot, enableLU)
-            self.soln.setStyleSheet("color: black; font-family: Cascadia Mono")
+            final, self.hist = GaussianEliminate(self.matrix.copy(), pivot, enableLU, self.calculationAcc)
+            self.soln1.setStyleSheet("color: black; font-family: Cascadia Mono")
             if enableLU:
                 self.enableLU = True
                 self.augcol = 0
-                self.soln.setText("LUP Decomposition: P^-1LU = A")
+                self.soln1.setText("LUP Decomposition: P^-1LU = A")
                 self.op.setText(self.hist[0][1] + "\n" + concat([toString(np.linalg.inv(self.hist[0][2]), 3), toString(self.hist[0][3], 3), toString(self.hist[0][0], 3)]))
             else:
                 self.enableLU = False
                 self.augcol = 1
-                lst = GaussianSolve(final, pivot, enableLU)
+                lst = GaussianSolve(final, pivot, enableLU, self.calculationAcc)
                 if isinstance(lst, list):
                     for i in range(len(lst)):
                         lst[i] = f"x{i}: {lst[i].evalf(3)}"
-                    self.soln.setText(str(lst)[1:-1].replace("'",""))
+                    self.soln1.setText(str(lst)[1:-1].replace("'",""))
                 else:
-                    self.soln.setText(lst)
+                    self.soln1.setText(lst)
                 self.op.setText(self.hist[0][1])
             self.page = 0
             self.last = len(self.hist) - 1
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
             self.pageLabel.setText(f"Page 1 of {self.last + 1}")
-        elif val == 2:
+        elif val == 3:
             self.enableLU = False
             modified, normed = params[1:]
             self.asMatrix = False
             self.hist, norm = GramSchmidtOrth(self.matrix.copy(), modified, normed, self.calculationAcc)
             statusColour = "black" if norm is None else "green" if norm < 10 ** -12 else "orange" if norm < 10 ** -8 else "red"
             statusText = "N/A" if norm is None else "Good" if norm < 10 ** -12 else "Fair" if norm < 10 ** -8 else "Poor"
-            self.soln.setText(f"Orthogonality Error (Frobenius norm): {norm} ({statusText})")
-            self.soln.setStyleSheet(f"color: {statusColour}; font-family: Cascadia Mono")
+            self.soln1.setText(f"Orthogonality Error (Frobenius norm): {norm} ({statusText})")
+            self.soln1.setStyleSheet(f"color: {statusColour}; font-family: Cascadia Mono")
             self.page = 0
             self.last = len(self.hist) - 1
             self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
             self.pageLabel.setText(f"Page 1 of {self.last + 1}")
             self.op.setText(self.hist[0][1])
+        elif val == 2:
+            self.enableLU = False
+            invMode = params[1]
+            if invMode == 1:
+                self.hist, iden, norm, cond = GJInverse(self.matrix.copy(), False, self.calculationAcc)
+            elif invMode == 2:
+                self.hist, iden, norm, cond = GJInverse(self.matrix.copy(), True, self.calculationAcc)
+            if self.hist is not None:
+                self.augcol = self.matrix.shape[0]
+                statusColour = "green" if iden < 10 ** -12 else "orange" if iden < 10 ** -8 else "red"
+                statusText = f"Identity Residual (Frobenius norm): {iden} ({"Good" if iden < 10 ** -12 else "Fair" if iden < 10 ** -8 else "Poor; matrix possibly singular"})"
+                invrColour = "green" if norm < 10 ** -12 else "orange" if norm < 10 ** -8 else "red"
+                invrText = f"Inverse Residual (Frobenius norm): {norm} ({"Good" if norm < 10 ** -12 else "Fair" if norm < 10 ** -8 else "Poor"})\n"
+                condColour = "green" if cond < 10 ** 6 else "orange" if cond < 10 ** 10 else "red"
+                condText = f"Condition Number (Frobenius norm): {cond} ({"Good" if cond < 10 ** 6 else "Fair" if cond < 10 ** 10 else "Poor"})"
+                self.soln1.setText(statusText)
+                self.soln1.setStyleSheet(f"color: {statusColour}; font-family: Cascadia Mono")
+
+                self.soln2 = QLabel(invrText)
+                self.soln2.setStyleSheet(f"color: {invrColour}; font-family: Cascadia Mono")
+                self.soln3 = QLabel(condText)
+                self.soln3.setStyleSheet(f"color: {condColour}; font-family: Cascadia Mono")
+                self.viewer.layout.addWidget(self.soln2)
+                self.viewer.layout.addWidget(self.soln3)
+
+                self.page = 0
+                self.last = len(self.hist) - 1
+                self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
+                self.pageLabel.setText(f"Page 1 of {self.last + 1}")
+                self.op.setText(self.hist[0][1])
+            else:
+                self.calculationAccWheel.setDisabled(False)
+                self.error = NumStabilityWindows.ErrorWindow(3, None)
+                self.error.show()
+                              
+                              

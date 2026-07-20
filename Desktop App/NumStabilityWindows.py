@@ -18,22 +18,12 @@ class ErrorWindow(QWidget):
         self.setWindowTitle("Error")
         self.window = window
         self.layout = QVBoxLayout()
-        if type == 0:
-            self.layout.addWidget(QLabel("Please select an object."))
-        elif type == 1:
+        if type == 1:
             self.layout.addWidget(QLabel("At least one of your entries is invalid. Please try again."))
         elif type == 2:
             self.layout.addWidget(QLabel("Matrix has inconsistent dimensions. Please try again."))
-        elif type == 99: #Invalid convolution matrix (even dimensions)
-            self.layout.addWidget(QLabel("Convolution kernel must have odd dimensions. Please try again."))
-        elif type == 101: #Invalid stochastic matrix and probability vector (wrong shape)
-            self.layout.addWidget(QLabel("Invalid dimensions. Must be n x (n + 1). Please try again."))
-        elif type == 102: #Invalid stochastic matrix and probability vector (negative entries detected)
-            self.layout.addWidget(QLabel("Stochastic matrix and probability vector must have non-negative entries. Please try again."))
-        elif type == 103: #Invalid stochastic matrix and probability vector (zero column detected)
-            self.layout.addWidget(QLabel("Stochastic matrix columns and probability vector must be non-zero. Please try again."))
-        elif type == 104: #Stochastic matrix is bigger than 6x6 (practical limit for visualisation purposes)
-            self.layout.addWidget(QLabel("Visu(AL)-1 currently allows at most 6 states. Please try again."))
+        elif type == 3:
+            self.layout.addWidget(QLabel("This operation only applies to square matrices. Please try again."))
         else:
             self.layout.addWidget(QLabel("Unknown error occurred."))
         self.submit = QPushButton("OK")
@@ -66,19 +56,27 @@ class ActionWindow(QWidget):
         GaussianElim.toggled.connect(self.onToggle)
         self.optionLayout.addWidget(GaussianElim)
 
+        MatrixInv = QRadioButton("Matrix Inversion")
+        MatrixInv.setObjectName("2")
+        MatrixInv.toggled.connect(self.onToggle)
+        self.optionLayout.addWidget(MatrixInv)
+
         GramSchmidt = QRadioButton("Gram-Schmidt Process")
-        GramSchmidt.setObjectName("2")
+        GramSchmidt.setObjectName("3")
         GramSchmidt.toggled.connect(self.onToggle)
         self.optionLayout.addWidget(GramSchmidt)
 
         self.layout.addWidget(self.optionPanel, 1, 0)
         self.layout.addWidget(self.valuesPanel, 1, 1)
         self.submit = QPushButton("Submit")
+        self.submit.setEnabled(False)
+        self.layout.addWidget(self.submit, 2, 0, 1, 2)
         self.setLayout(self.layout)
     
     def onToggle(self):
+        self.submit.setEnabled(False)
         try:
-            self.layout.removeWidget(self.submit)
+            self.submit.clicked.disconnect()
         except:
             pass
         while self.valuesLayout.count() > 0:
@@ -98,6 +96,20 @@ class ActionWindow(QWidget):
             self.valuesLayout.addWidget(npivot)
             self.valuesLayout.addWidget(ppivot)
         elif self.val == 2:
+            self.submit.clicked.connect(self.matrixInvSend)
+            npivot = QRadioButton("Gauss-Jordan")
+            npivot.setObjectName("1")
+            npivot.clicked.connect(self.matrixInvMode)
+            ppivot = QRadioButton("GJ with Pivoting")
+            ppivot.setObjectName("2")
+            ppivot.clicked.connect(self.matrixInvMode)
+            lup = QRadioButton("LUP Factorisation")
+            lup.setObjectName("3")
+            lup.clicked.connect(self.matrixInvMode)
+            self.valuesLayout.addWidget(npivot)
+            self.valuesLayout.addWidget(ppivot)
+            #self.valuesLayout.addWidget(lup)
+        elif self.val == 3:
             self.submit.clicked.connect(self.GSSend)
             cgs = QRadioButton("Classical Gram-Schmidt")
             cgs.setObjectName("0")
@@ -112,26 +124,20 @@ class ActionWindow(QWidget):
             self.valuesLayout.addWidget(normalise)
     
     def gaussianPivotToggle(self):
-        try:
-            self.layout.removeWidget(self.submit)
-        except:
-            pass
+        self.submit.setEnabled(True)
         rb = self.sender()
         self.pivot = int(rb.objectName())
+        try:
+            self.valuesLayout.removeWidget(self.LUBox)
+        except:
+            pass
         if self.pivot:
             self.LUBox = QCheckBox("LU Factorisation")
             self.LUBox.clicked.connect(self.gaussianLUToggle)
             self.valuesLayout.addWidget(self.LUBox)
             pass
-        else:
-            try:
-                self.valuesLayout.removeWidget(self.LUBox)
-            except:
-                pass
+            
         self.enableLU = False
-        self.submit = QPushButton("Submit")
-        self.submit.clicked.connect(self.gaussianElimSend)
-        self.layout.addWidget(self.submit, 2, 0, 1, 2)
     
     def gaussianLUToggle(self):
         cb = self.sender()
@@ -141,17 +147,20 @@ class ActionWindow(QWidget):
         self.nums.emit([self.val, self.pivot, self.enableLU])
         self.close()
     
+    def matrixInvMode(self):
+        self.submit.setEnabled(True)
+        rb = self.sender()
+        self.invMode = int(rb.objectName())
+    
+    def matrixInvSend(self):
+        self.nums.emit([self.val, self.invMode])
+        self.close()
+    
     def MGSToggle(self):
-        try:
-            self.layout.removeWidget(self.submit)
-        except:
-            pass
+        self.submit.setEnabled(True)
         rb = self.sender()
         self.modified = int(rb.objectName())
         self.normed = False
-        self.submit = QPushButton("Submit")
-        self.submit.clicked.connect(self.GSSend)
-        self.layout.addWidget(self.submit, 2, 0, 1, 2)
     
     def GSNorm(self):
         cb = self.sender()
