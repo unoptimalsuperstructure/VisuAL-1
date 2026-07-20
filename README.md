@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.2.1c**
+**Current version: v0.2.1d**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -69,6 +69,9 @@ Features: Import a CSV of a transition matrix (DTMC) or Q-matrix (CTMC), or form
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.2.1c -> v0.2.1d
+- Added matrix inversion and some bug fixes
+
 v0.2.1b -> v0.2.1c
 - Changed 3D sandbox DB backend to SQLite instead of MongoDB
 
