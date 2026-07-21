@@ -302,5 +302,15 @@ class NumStabilitySidePanel(QGridLayout):
                 self.calculationAccWheel.setDisabled(False)
                 self.error = NumStabilityWindows.ErrorWindow(3, None)
                 self.error.show()
+        elif val == 4:
+            self.enableLU = False
+            self.asMatrix = True
+            self.hist = DiagonaliseMatrix(self.matrix.copy())
+            self.soln1.setText("Diagonalisation")
+            self.page = 0
+            self.last = len(self.hist) - 1
+            self.displayMatrix.setText(self.displayType(toString(self.hist[self.page][0], self.displayAcc)))
+            self.pageLabel.setText(f"Page 1 of {self.last + 1}")
+            self.op.setText(self.hist[0][1])
                               
                               

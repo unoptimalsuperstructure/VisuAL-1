@@ -222,3 +222,37 @@ def GramSchmidtOrth(mat: np.array, modified: bool, normed: bool, acc: int):
             hist.append([mat.copy(), f"Normalise vector {i + 1}"])
     hist[-1][1] += "\nOrthogonalisation complete!"
     return hist, np.linalg.norm(mat @ mat.T - np.eye(mat.shape[0]))
+
+def DiagonaliseMatrix(mat: np.array):
+    if mat.shape[0] != mat.shape[1]:
+        return None
+    charpoly = str(sp.Matrix(mat).charpoly("x").as_expr()).replace("**","^").replace("*","")
+    hist = [[mat, "Characteristic polynomial: " + charpoly]]
+    eigs = []
+    P = np.zeros(mat.shape)
+    dic = sp.Matrix(mat).eigenvals()
+    for i in dic:
+        if "I" in str(i):
+            hist.append([mat, "Characteristic polynomial has non-real roots. Not diagonalisable."])
+            return hist
+        eigs.append([i, dic[i]])
+    j = 0
+    for eig in eigs:
+        nullspace = sp.Matrix.nullspace(sp.Matrix(mat-eig[0]*np.eye(mat.shape[0])).rref()[0])
+        hist.append([np.array(sp.Matrix(mat.copy()).rref()[0], np.float64), "RREF"])
+        if len(nullspace) < eig[1]:
+            hist.append([hist[-1][0], "Complete basis of eigenvectors could not be found. Not diagonalisable."])
+            return hist
+        else:
+            for v in nullspace:
+                w = sp.Matrix.tolist(v)
+                for i in range(len(w)):
+                    w[i] = w[i][0]
+                P[:, j] = np.float64(w)
+                hist.append([P.copy(), f"Adding eigenvector(s) with eigenvalue {eig[0]}"])
+                j += 1
+    D = []
+    for i in dic:
+        D.extend([i] * dic[i])
+    hist.append([np.float64(np.diag(D)), "Diagonal matrix D such that A ~ PDP^-1"])
+    return hist

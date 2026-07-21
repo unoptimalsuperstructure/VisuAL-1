@@ -66,6 +66,11 @@ class ActionWindow(QWidget):
         GramSchmidt.toggled.connect(self.onToggle)
         self.optionLayout.addWidget(GramSchmidt)
 
+        Diagonalise = QRadioButton("Diagonalisation")
+        Diagonalise.setObjectName("4")
+        Diagonalise.toggled.connect(self.onToggle)
+        self.optionLayout.addWidget(Diagonalise)
+
         self.layout.addWidget(self.optionPanel, 1, 0)
         self.layout.addWidget(self.valuesPanel, 1, 1)
         self.submit = QPushButton("Submit")
@@ -122,6 +127,9 @@ class ActionWindow(QWidget):
             self.valuesLayout.addWidget(cgs)
             self.valuesLayout.addWidget(mgs)
             self.valuesLayout.addWidget(normalise)
+        elif self.val == 4:
+            self.submit.clicked.connect(self.diagonalise)
+            self.submit.setEnabled(True)
     
     def gaussianPivotToggle(self):
         self.submit.setEnabled(True)
@@ -168,4 +176,8 @@ class ActionWindow(QWidget):
     
     def GSSend(self):
         self.nums.emit([self.val, self.modified, self.normed])
+        self.close()
+    
+    def diagonalise(self):
+        self.nums.emit([self.val])
         self.close()
