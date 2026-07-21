@@ -323,6 +323,8 @@ function applyCompress_UI() {
   }
   document.getElementById('compress-modal-bg').style.display = 'none';
   applyCompress(l, k);
+  refreshStepsList();
+  renderFrame(); 
 }
  
 function setBlurType(type) {

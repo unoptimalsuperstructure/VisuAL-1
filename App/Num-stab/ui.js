@@ -164,7 +164,7 @@ function nsRunExtra(a) {
       NS.soln = nsResidualLine('‖A·A⁻¹ − I‖_F', r.residual);
     }
   } else if (a === 'diag') {
-    const r = diagonalize(NS.matrix);
+    const r = diagonalise(NS.matrix);
     if (r.error) { alert(r.error); NS.ran = false; return; }
     NS.asMatrix = true; NS.augcol = 0; NS.vectorLines = false;
     if (r.fail) {

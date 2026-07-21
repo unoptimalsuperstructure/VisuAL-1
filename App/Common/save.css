@@ -1,0 +1,29 @@
+.ts-modal { max-width: 520px; width: 92%; }
+.ts-list {
+  margin-top: 10px; max-height: 260px; overflow-y: auto;
+  font-size: 12px; color: var(--muted);
+}
+.ts-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+}
+.ts-name {
+  flex: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; color: var(--text);
+}
+.ts-btn { width: auto; padding: 4px 8px; font-size: 11px; }
+.ts-url {
+  width: 100%; box-sizing: border-box; margin-top: 8px;
+  font-size: 11px; font-family: var(--font-maths);
+  padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--panel2); color: var(--text);
+}
+
+.ts-note {
+  font-size: 12.5px; color: var(--text);
+  line-height: 1.65; margin: 12px 0;
+}
+.ts-login {
+  display: inline-block; width: auto;
+  padding: 6px 16px; text-decoration: none; text-align: center;
+}

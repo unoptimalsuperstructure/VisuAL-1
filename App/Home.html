@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <title>VisuAL-1</title>
-  <link rel="stylesheet" href="Shared/BaseStyle.css"/>
+  <link rel="stylesheet" href="Common/BaseStyle.css"/>
   <link rel="stylesheet" href="Home.css"/>
 </head>
 <body>
@@ -12,7 +12,7 @@
   <div class="logo">VisuAL-1</div>
   <div class="version">Milestone 3</div>
   <div class="spacer"></div>
-  <!-- Maybe log in button? -->
+  <a id="auth-slot" class="auth-btn" href="Login/login.html">Log In</a>
 </div>
 
 <div id="main">
@@ -41,6 +41,11 @@
       <div class="tool-card-sub">Best fit line, SVD &amp; PCA</div>
     </div>
 
+    <div class="tool-card" id="card-numstab" onclick="openTool('numstab')">
+      <div class="tool-card-name">Numerical Stability</div>
+      <div class="tool-card-sub">Nuimerical algorithms used in linear algebra</div>
+    </div>
+
   </div>
 
   <!-- ── Preview pane ── -->
@@ -58,7 +63,6 @@
 </div>
 
 <script>
-
 const TOOLS = {
   sandbox: {
     name: '3D Sandbox and Data Processing',
@@ -81,11 +85,16 @@ const TOOLS = {
     href: './ImageProcess/image.html',
   },
   data: {
-  name: 'Data Engineering',
-  desc: 'Load a CSV, choose three column data to be the X, Y and Z axis, and plot the rows ' +
-        'as a 3D point. Fit a line, or walk through the SVD / PCA of the ' +
-        'data\'s covariance shape, step by step.',
-  href: './DataEngineering/data.html',
+    name: 'Data Engineering',
+    desc: 'Load a CSV, choose three column data to be the X, Y and Z axis, and plot the rows ' +
+          'as a 3D point. Fit a line, or walk through the SVD / PCA of the ' +
+          'data\'s covariance shape, step by step.',
+    href: './DataEngineering/data.html',
+  },
+  numstab: {
+    name: 'Numerical Stability',
+    desc: 'Will edit later',
+    href: './Num-stab/numstab.html',
   },
 };   
 
@@ -105,7 +114,9 @@ function openTool(id) {
   document.getElementById('info-desc').textContent = t.desc;
   document.getElementById('info-proceed-btn').href = t.href;
 }
-
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./Login/auth.js"></script>
 </body>
 </html>

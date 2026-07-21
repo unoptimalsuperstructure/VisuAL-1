@@ -306,13 +306,8 @@ function fxSharpen(layer, v) {
   layer.putImageData(id);
 }
 
-function rankKApprox(A, h, w, k, iters = 8) {
-  k = Math.min(k, w, h);
-  let V = new Float64Array(w * k);
-  for (let i = 0; i < V.length; i++) V[i] = Math.random() - 0.5;
-  const AV = new Float64Array(h * k), W = new Float64Array(w * k);
- 
-  const orth = M => {
+function makeOrth(w, k) {
+  return M => {
     for (let c = 0; c < k; c++) {
       for (let attempt = 0; attempt < 3; attempt++) {
         let before = 0;
@@ -334,8 +329,21 @@ function rankKApprox(A, h, w, k, iters = 8) {
       }
     }
   };
-  orth(V);
+}
  
+function rankKApprox(A, h, w, k, iters = 4) {
+  k = Math.min(k, w, h);
+  const orth = makeOrth(w, k);
+  let V = new Float64Array(w * k);
+  for (let i = 0; i < V.length; i++) V[i] = Math.random() - 0.5;
+  orth(V);
+
+  if (typeof svdWasmRankK === 'function') {
+    const B = svdWasmRankK(A, h, w, k, iters, V, orth);
+    if (B) return B;
+  }
+  // IN CASE WASM DOESNT WORK!!
+  const AV = new Float64Array(h * k), W = new Float64Array(w * k);
   for (let it = 0; it < iters; it++) {
     AV.fill(0);
     for (let r = 0; r < h; r++)
