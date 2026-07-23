@@ -161,7 +161,7 @@ async function tsSaveCurrent() {
   const emptyWhy = TS.empty ? TS.empty() : false;
   if (emptyWhy) return tsMsg(typeof emptyWhy === 'string'
       ? emptyWhy : 'Nothing to save yet.', true);
-  const { data, error } = await saveTool(TS.tool, name, TS.serialize());
+  const { data, error } = await saveTool(TS.tool, name, TS.serialise());
   if (error) return tsMsg(error, true);
   nameEl.value = '';
   tsMsg(`Saved "${data.name}".`);

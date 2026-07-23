@@ -22,7 +22,14 @@ async function authToken() {
 }
 
 async function authSignOut() {
-  if (sb) await sb.auth.signOut();
+  if (!sb) return;
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data.session)
+      for (const k of Object.keys(localStorage))
+        if (/^sb-.*-auth-token$/.test(k)) localStorage.removeItem(k);
+  } catch (_) {}
   renderAuthButton();
 }
 
@@ -30,18 +37,23 @@ async function renderAuthButton() {
   const slot = document.getElementById('auth-slot');
   if (!slot) return;
 
-  const loginHref = slot.dataset.loginHref || 'login.html';
+  const loginHref = slot.dataset.loginHref || '../Login/login.html';
+  slot.textContent = '';
 
-  const session = await authSession();
+  const session = authConfigured ? await authSession() : null;
   if (session) {
-    const email = session.user?.email ?? 'account';
-    slot.innerHTML =
-      `<span class="auth-email" title="${email}">${email}</span>` +
-      `<button class="auth-btn" id="auth-logout">Log out</button>`;
-    document.getElementById('auth-logout')
-      ?.addEventListener('click', authSignOut);
+    const btn = document.createElement('button');
+    btn.className = 'auth-btn';
+    btn.id = 'auth-logout';
+    btn.textContent = 'Log out';
+    btn.addEventListener('click', authSignOut);
+    slot.appendChild(btn);
   } else {
-    slot.innerHTML = `<a class="auth-btn" href="${loginHref}">Log in</a>`;
+    const a = document.createElement('a');
+    a.className = 'auth-btn';
+    a.href = loginHref;
+    a.textContent = 'Log in';
+    slot.appendChild(a);
   }
 }
 
