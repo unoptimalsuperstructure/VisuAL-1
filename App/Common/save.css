@@ -27,3 +27,13 @@
   display: inline-block; width: auto;
   padding: 6px 16px; text-decoration: none; text-align: center;
 }
+
+.ts-sect {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin-top: 14px;
+}
+.ts-live {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; padding: 1px 7px; border-radius: 9px;
+  background: #2f9e4422; color: #2f9e44; flex: none;
+}

@@ -16,8 +16,11 @@ async function tsOpen() {
   const rowEl = document.getElementById('ts-saverow');
   const listEl = document.getElementById('ts-list');
   document.getElementById('ts-url').style.display = 'none';
+  const heads = document.querySelectorAll('.ts-sect');
   if (error) {
     rowEl.style.display = 'none';
+    heads.forEach(h => { h.style.display = 'none'; });
+    document.getElementById('ts-share-list').textContent = '';
     listEl.textContent = '';
     const note = document.createElement('div');
     note.className = 'ts-note';
@@ -33,8 +36,10 @@ async function tsOpen() {
     return;
   }
   rowEl.style.display = '';
+  heads.forEach(h => { h.style.display = ''; });
   tsMsg('');
   tsRefreshList();
+  tsRefreshShares();
 }
 
 async function tsRefreshList() {
@@ -93,6 +98,60 @@ function tsShareResult(r) {
   try { navigator.clipboard?.writeText(r.data.url); } catch (_) {}
   tsMsg('Share link created and copied — anyone with it can view ' +
         (r.data.save_id ? '(live: it follows this save).' : '(frozen snapshot).'));
+  tsRefreshShares();
+}
+
+async function tsRefreshShares() {
+  const listEl = document.getElementById('ts-share-list');
+  if (!listEl) return;
+  const { data, error } = await listShares();
+  if (error) { listEl.textContent = ''; return tsMsg(error, true); }
+  const mine = data.filter(r => r.tool === TS.tool);
+  listEl.textContent = '';
+  if (!mine.length) { listEl.textContent = 'No share links yet.'; return; }
+
+  for (const row of mine) {
+    const item = document.createElement('div');
+    item.className = 'ts-item';
+
+    const name = document.createElement('span');
+    name.className = 'ts-name';
+    name.textContent = row.title || '(untitled)';
+    name.title = 'created ' + new Date(row.created_at).toLocaleString() +
+      (row.expires_at ? ' · expires ' + new Date(row.expires_at).toLocaleString() : '');
+    item.appendChild(name);
+
+    if (row.save_id) {
+      const b = document.createElement('span');
+      b.className = 'ts-live';
+      b.textContent = 'live';
+      item.appendChild(b);
+    }
+
+    const mk = (label, fn, danger) => {
+      const b = document.createElement('button');
+      b.className = 'btn ts-btn' + (danger ? ' danger' : '');
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      item.appendChild(b);
+    };
+    mk('Copy link', () => {
+      const out = document.getElementById('ts-url');
+      out.style.display = 'block';
+      out.value = row.url;
+      out.select();
+      try { navigator.clipboard?.writeText(row.url); } catch (_) {}
+      tsMsg('Link copied.');
+    });
+    mk('Delete', async () => {
+      const r = await deleteShare(row.token);
+      if (r.error) return tsMsg(r.error, true);
+      tsMsg('Share link deleted — the URL no longer works.');
+      tsRefreshShares();
+    }, true);
+
+    listEl.appendChild(item);
+  }
 }
 
 async function tsSaveCurrent() {
@@ -129,7 +188,6 @@ function tsBuildUI() {
     } else setState(false);
   }
 
-  // the modal, built once
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.id = 'ts-modal';
@@ -157,8 +215,14 @@ function tsBuildUI() {
   saveBtn.addEventListener('click', tsSaveCurrent);
   rowEl.append(lab, inp, saveBtn);
 
+  const savesHead = document.createElement('div');
+  savesHead.className = 'ts-sect'; savesHead.textContent = 'Saves';
   const list = document.createElement('div');
   list.className = 'ts-list'; list.id = 'ts-list';
+  const sharesHead = document.createElement('div');
+  sharesHead.className = 'ts-sect'; sharesHead.textContent = 'Share links';
+  const shareList = document.createElement('div');
+  shareList.className = 'ts-list'; shareList.id = 'ts-share-list';
   const url = document.createElement('input');
   url.className = 'ts-url'; url.id = 'ts-url';
   url.readOnly = true; url.style.display = 'none';
@@ -174,7 +238,7 @@ function tsBuildUI() {
   close.addEventListener('click', () => { bg.style.display = 'none'; });
   actions.appendChild(close);
 
-  modal.append(h3, rowEl, list, url, msg, actions);
+  modal.append(h3, rowEl, savesHead, list, sharesHead, shareList, url, msg, actions);
   bg.appendChild(modal);
   document.body.appendChild(bg);
 }

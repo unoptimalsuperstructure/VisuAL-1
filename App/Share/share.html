@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="referrer" content="same-origin"/>
+  <title>Shared</title>
+  <link rel="stylesheet" href="../Common/BaseStyle.css"/>
+  <link rel="stylesheet" href="share.css"/>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">VisuAL-1</div>
+  <div class="version">shared view</div>
+  <div class="spacer"></div>
+  <a class="topbar-back" href="../Home.html">Back to home page →</a>
+</div>
+
+<div id="share-wrap">
+  <div class="share-head">
+    <h2 id="share-title">Loading…</h2>
+    <div class="share-meta" id="share-meta"></div>
+    <div class="share-note">A read-only view shared from VisuAL-1. Nothing here can be edited.</div>
+  </div>
+  <div class="share-card" id="share-body"><div class="share-note">Fetching the shared data…</div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../Common/auth.js"></script>
+<script src="../Common/api.js"></script>
+<script src="../Common/PrintMatrix.js"></script>
+<script>
+'use strict';
+
+const TOOL_NAMES = { markov: 'Markov Chains', data: 'Data Engineering',
+                     '3d': '3D Sandbox', image: 'Image Processing',
+                     numstab: 'Numerical Stability' };
+
+const $body = document.getElementById('share-body');
+
+function fail(text) {
+  document.getElementById('share-title').textContent = 'Nothing to show';
+  $body.textContent = '';
+  const d = document.createElement('div');
+  d.className = 'share-err';
+  d.textContent = text;
+  $body.appendChild(d);
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function renderMarkov(p) {
+  const cv = el('canvas'); cv.id = 'share-canvas';
+  $body.appendChild(cv);
+  const info = el('div', 'share-note');
+  info.textContent = `${p.nodes?.length ?? 0} states · ${p.edges?.length ?? 0} edges · ` +
+    (p.mode === 'ctmc' ? 'continuous-time (weights are rates)' : 'discrete-time (weights are probabilities)');
+  $body.appendChild(info);
+
+  const nodes = (p.nodes || []).map(n => ({
+    id: +n.id, label: String(n.label ?? '?'), x: +n.x || 0, y: +n.y || 0,
+    color: /^#[0-9a-fA-F]{3,8}$/.test(n.color ?? '') ? n.color : '#4a7dd6',
+  }));
+  const edges = (p.edges || []).filter(e =>
+    nodes.some(n => n.id === +e.from) && nodes.some(n => n.id === +e.to));
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.width = cv.clientWidth * dpr, H = cv.height = 420 * dpr;
+  const g = cv.getContext('2d');
+  if (!nodes.length) return;
+
+  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+  const mnx = Math.min(...xs), mxx = Math.max(...xs);
+  const mny = Math.min(...ys), mxy = Math.max(...ys);
+  const M = 46 * dpr;
+  const sc = Math.min((W - 2*M) / Math.max(1, mxx - mnx),
+                      (H - 2*M) / Math.max(1, mxy - mny), 1.4 * dpr);
+  const X = x => M + (x - mnx) * sc + (W - 2*M - (mxx - mnx) * sc) / 2;
+  const Y = y => M + (y - mny) * sc + (H - 2*M - (mxy - mny) * sc) / 2;
+  const R = 20 * dpr;
+
+  g.font = `${11 * dpr}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const e of edges) {
+    const a = nodes.find(n => n.id === +e.from), b = nodes.find(n => n.id === +e.to);
+    const ax = X(a.x), ay = Y(a.y), bx = X(b.x), by = Y(b.y);
+    g.strokeStyle = '#99999988'; g.lineWidth = 1.2 * dpr;
+    if (a === b) {
+      g.beginPath(); g.arc(ax, ay - R * 1.4, R * 0.8, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#777';
+      g.fillText(String(+e.weight), ax, ay - R * 2.6);
+      continue;
+    }
+    const ang = Math.atan2(by - ay, bx - ax);
+    const sx = ax + Math.cos(ang) * R, sy = ay + Math.sin(ang) * R;
+    const ex = bx - Math.cos(ang) * (R + 4 * dpr), ey = by - Math.sin(ang) * (R + 4 * dpr);
+    g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
+    g.beginPath();
+
+
+
+
+
+
+    
+    g.moveTo(ex, ey);
+    g.lineTo(ex - 8*dpr*Math.cos(ang - 0.4), ey - 8*dpr*Math.sin(ang - 0.4));
+    g.lineTo(ex - 8*dpr*Math.cos(ang + 0.4), ey - 8*dpr*Math.sin(ang + 0.4));
+    g.closePath(); g.fillStyle = '#999'; g.fill();
+    g.fillStyle = '#777';
+    g.fillText(String(+e.weight), (sx + ex) / 2, (sy + ey) / 2 - 7 * dpr);
+  }
+  for (const n of nodes) {
+    g.beginPath(); g.arc(X(n.x), Y(n.y), R, 0, Math.PI * 2);
+    g.fillStyle = n.color; g.fill();
+    g.strokeStyle = '#00000033'; g.stroke();
+    g.fillStyle = '#fff';
+    g.fillText(n.label, X(n.x), Y(n.y));
+  }
+}
+
+function renderData(p) {
+  const rows = Array.isArray(p.rows) ? p.rows : [];
+  const heads = Array.isArray(p.headers) ? p.headers : [];
+  $body.appendChild(el('div', 'share-note',
+    `${rows.length} rows × ${heads.length} columns` +
+    (p.sel ? ` · plotted columns: ${[p.sel.x, p.sel.y, p.sel.z]
+        .map(i => heads[i] ?? '?').join(', ')}` : '')));
+  const t = el('table', 'share-table');
+  const tr = el('tr');
+  heads.forEach(h2 => tr.appendChild(el('th', '', String(h2))));
+  t.appendChild(tr);
+  rows.slice(0, 15).forEach(r => {
+    const tr2 = el('tr');
+    (r || []).forEach(c => tr2.appendChild(el('td', '', String(c))));
+    t.appendChild(tr2);
+  });
+  $body.appendChild(t);
+  if (rows.length > 15)
+    $body.appendChild(el('div', 'share-note', `… and ${rows.length - 15} more rows.`));
+}
+
+function renderNumstab(p) {
+  if (!Array.isArray(p.matrix)) return fail('Malformed matrix payload.');
+  const pre = el('pre', 'share-matrix');
+  pre.textContent = displayAsMatrix(formatMatrix(p.matrix, 6), 0);
+  $body.appendChild(el('div', 'share-note',
+    `${p.matrix.length} × ${p.matrix[0]?.length ?? 0} matrix`));
+  $body.appendChild(pre);
+}
+
+function render3D(p) {
+  const ul = el('ul', 'share-list');
+  (p.objects || []).forEach(o =>
+    ul.appendChild(el('li', '', `${o.type ?? 'object'} — ${o.name ?? 'unnamed'}`)));
+  $body.appendChild(el('div', 'share-note',
+    `${(p.objects || []).length} objects · ` +
+    `${Object.keys(p.matrixStacks || {}).length} transform stacks · ` +
+    `${(p.savedLP || []).length} saved lines/planes`));
+  if (ul.children.length) $body.appendChild(ul);
+}
+
+function renderImage(p) {
+  const steps = p.steps || [];
+  $body.appendChild(el('div', 'share-note',
+    `${(p.sources || []).length} source image(s) · ${steps.length} processing step(s)`));
+  const ul = el('ul', 'share-list');
+  steps.forEach(s2 => ul.appendChild(el('li', '',
+    typeof s2 === 'string' ? s2 : (s2.op ?? JSON.stringify(s2).slice(0, 80)))));
+  if (ul.children.length) $body.appendChild(ul);
+  const thumbs = el('div', 'share-thumbs');
+  (p.sources || []).slice(0, 6).forEach(src => {
+    if (typeof src === 'string' && src.startsWith('data:image/')) {
+      const img = document.createElement('img');
+      img.src = src;
+      thumbs.appendChild(img);
+    }
+  });
+  if (thumbs.children.length) $body.appendChild(thumbs);
+}
+
+const RENDERERS = { markov: renderMarkov, data: renderData,
+                    numstab: renderNumstab, '3d': render3D, image: renderImage };
+
+(async () => {
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) return fail('No share token in the URL.');
+  const { data, error } = await fetchShare(token);
+  if (error) return fail(error);
+
+  document.getElementById('share-title').textContent =
+    data.title || TOOL_NAMES[data.tool] || 'Shared work';
+  const meta = document.getElementById('share-meta');
+  meta.textContent = `${TOOL_NAMES[data.tool] ?? data.tool} · shared ` +
+    new Date(data.created_at).toLocaleDateString();
+  if (data.save_id) {
+    const badge = el('span', 'share-live', 'live — follows the owner\u2019s save');
+    meta.appendChild(badge);
+  }
+
+  $body.textContent = '';
+  const r = RENDERERS[data.tool];
+  if (!r) return fail(`Unknown tool "${String(data.tool)}".`);
+  try { r(data.payload || {}); }
+  catch (e2) { fail('This snapshot could not be rendered.'); }
+})();
+</script>
+</body>
+</html>
