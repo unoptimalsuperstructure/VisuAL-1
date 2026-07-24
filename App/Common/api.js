@@ -1,7 +1,6 @@
 'use strict';
 
 async function apiSession() {
-  if (!sb) return { session: null, error: 'Supabase is not configured.' };
   const s = await authSession();
   return s ? { session: s, error: null }
            : { session: null, error: 'Sign in to save your work.' };
@@ -60,13 +59,15 @@ async function createShare(tool, title, payload, saveId = null, expiresAt = null
   if (error) return { data: null, error };
   const row = { user_id: session.user.id, tool, title: title || '', payload,
                 save_id: saveId };
-  if (expiresAt) row.expires_at = expiresAt;     // ISO string or Date
+
+  if (expiresAt === 'never') row.expires_at = null;
+  else if (expiresAt) row.expires_at = expiresAt;
   const { data, error: e } = await sb.from('share_links')
     .insert(row)
     .select('token, tool, title, save_id, created_at')
     .single();
   if (e) return { data: null, error: apiErr(e) };
-  return { data: { ...data, url: shareURL(data.token) }, error: null };
+  return { data: { ...data, url: shareURL(data.token, data.tool) }, error: null };
 }
 
 async function createShareFromSave(saveId, title, live = false, expiresAt = null) {
@@ -77,11 +78,16 @@ async function createShareFromSave(saveId, title, live = false, expiresAt = null
 }
 
 async function fetchShare(token) {
-  if (!sb) return { data: null, error: 'Supabase is not configured.' };
-  const { data, error: e } = await sb.from('share_links')
-    .select('token, tool, title, payload, save_id, created_at')
+  const { data, error } = await sb.rpc('open_share', { p_token: token });
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    return row ? { data: row, error: null }
+               : { data: null, error: 'This share link has expired or was deleted.' };
+  }
+  const { data: d2, error: e2 } = await sb.from('share_links')
+    .select('token, tool, title, payload, save_id, created_at, expires_at')
     .eq('token', token).single();
-  return { data, error: e ? 'Unknown or deleted share link.' : null };
+  return { data: d2, error: e2 ? 'Unknown or deleted share link.' : null };
 }
 
 async function listShares() {
@@ -91,7 +97,7 @@ async function listShares() {
     .select('token, tool, title, save_id, created_at, expires_at')
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: false });
-  return { data: data?.map(r => ({ ...r, url: shareURL(r.token) })), error: apiErr(e) };
+  return { data: data?.map(r => ({ ...r, url: shareURL(r.token, r.tool) })), error: apiErr(e) };
 }
 
 async function deleteShare(token) {
@@ -101,6 +107,15 @@ async function deleteShare(token) {
   return { data: !e, error: apiErr(e) };
 }
 
-function shareURL(token) {
-  return new URL('../Share/share.html', location.href).href + '?token=' + token;
+const TOOL_PAGES = {
+  markov:  'Markov/markov.html',
+  data:    'DataEngineering/data.html',
+  '3d':    '3d/3d.html',
+  image:   'ImageProcess/image.html',
+  numstab: 'NumStability/numstab.html',
+};
+
+function shareURL(token, tool) {
+  return new URL('../' + TOOL_PAGES[tool], location.href).href +
+         '?share=' + token;
 }

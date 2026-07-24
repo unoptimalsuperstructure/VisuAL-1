@@ -1,7 +1,7 @@
 'use strict';
 
 const SUPABASE_URL      = 'https://ywjprydgpjpbdsmcttiz.supabase.co';
-const SUPABASE_PUB_KEY = 'sb_publishable_q_h6lV_UzaYJS1IBED0Rug_M8hfb2zv';
+const SUPABASE_PUB_KEY  = 'sb_publishable_q_h6lV_UzaYJS1IBED0Rug_M8hfb2zv';
 
 const authConfigured =
   SUPABASE_URL.startsWith('https://') && SUPABASE_PUB_KEY.length > 20;

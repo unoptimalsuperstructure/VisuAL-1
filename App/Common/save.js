@@ -20,6 +20,8 @@ async function tsOpen() {
   if (error) {
     rowEl.style.display = 'none';
     heads.forEach(h => { h.style.display = 'none'; });
+    const ex = document.querySelector('.ts-exprow');
+    if (ex) ex.style.display = 'none';
     document.getElementById('ts-share-list').textContent = '';
     listEl.textContent = '';
     const note = document.createElement('div');
@@ -37,6 +39,8 @@ async function tsOpen() {
   }
   rowEl.style.display = '';
   heads.forEach(h => { h.style.display = ''; });
+  const exRow = document.querySelector('.ts-exprow');
+  if (exRow) exRow.style.display = '';
   tsMsg('');
   tsRefreshList();
   tsRefreshShares();
@@ -75,10 +79,18 @@ async function tsRefreshList() {
       tsMsg(`Loaded "${row.name}".`);
       document.getElementById('ts-modal').style.display = 'none';
     });
+    mk('Update', async () => {
+      const why = TS.empty ? TS.empty() : false;
+      if (why) return tsMsg(typeof why === 'string' ? why : 'Nothing to save yet.', true);
+      const r = await updateSave(row.id, { payload: TS.serialise() });
+      if (r.error) return tsMsg(r.error, true);
+      tsMsg(`Updated "${row.name}" with the current state — live links now show it.`);
+      tsRefreshList();
+    });
     mk('Share snapshot', async () =>
-      tsShareResult(await createShareFromSave(row.id, row.name, false)));
+      tsShareResult(await createShareFromSave(row.id, row.name, false, tsExpiry())));
     mk('Share live', async () =>
-      tsShareResult(await createShareFromSave(row.id, row.name, true)));
+      tsShareResult(await createShareFromSave(row.id, row.name, true, tsExpiry())));
     mk('Delete', async () => {
       const r = await deleteSave(row.id);
       if (r.error) return tsMsg(r.error, true);
@@ -99,6 +111,13 @@ function tsShareResult(r) {
   tsMsg('Share link created and copied — anyone with it can view ' +
         (r.data.save_id ? '(live: it follows this save).' : '(frozen snapshot).'));
   tsRefreshShares();
+}
+
+function tsExpiry() {
+  const v = document.getElementById('ts-exp')?.value || '7';
+  if (v === 'never') return 'never';
+  if (v === '30') return new Date(Date.now() + 30 * 864e5).toISOString();
+  return null;
 }
 
 async function tsRefreshShares() {
@@ -127,6 +146,18 @@ async function tsRefreshShares() {
       b.textContent = 'live';
       item.appendChild(b);
     }
+    const exp = document.createElement('span');
+    exp.className = 'ts-exp-tag';
+    if (row.expires_at) {
+      const days = Math.max(0, Math.ceil((new Date(row.expires_at) - Date.now()) / 864e5));
+      exp.textContent = days + 'd';
+      exp.title = 'Expires ' + new Date(row.expires_at).toLocaleString() +
+                  ' but each visit extends it by 7 days.';
+    } else {
+      exp.textContent = '\u221e';
+      exp.title = 'Never expires.';
+    }
+    item.appendChild(exp);
 
     const mk = (label, fn, danger) => {
       const b = document.createElement('button');
@@ -221,6 +252,20 @@ function tsBuildUI() {
   list.className = 'ts-list'; list.id = 'ts-list';
   const sharesHead = document.createElement('div');
   sharesHead.className = 'ts-sect'; sharesHead.textContent = 'Share links';
+  const expRow = document.createElement('div');
+  expRow.className = 'ts-exprow';
+  const expLab = document.createElement('label');
+  expLab.textContent = 'New links expire:';
+  const expSel = document.createElement('select');
+  expSel.id = 'ts-exp';
+  for (const [val, label] of [['7', '7 days after the last visit'],
+                              ['30', '30 days after the last visit'],
+                              ['never', 'never']]) {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = label;
+    expSel.appendChild(o);
+  }
+  expRow.append(expLab, expSel);
   const shareList = document.createElement('div');
   shareList.className = 'ts-list'; shareList.id = 'ts-share-list';
   const url = document.createElement('input');
@@ -238,15 +283,106 @@ function tsBuildUI() {
   close.addEventListener('click', () => { bg.style.display = 'none'; });
   actions.appendChild(close);
 
-  modal.append(h3, rowEl, savesHead, list, sharesHead, shareList, url, msg, actions);
+  modal.append(h3, rowEl, savesHead, list, sharesHead, expRow, shareList,
+               url, msg, actions);
   bg.appendChild(modal);
   document.body.appendChild(bg);
 }
 
+const TOOL_LABELS = { markov: 'Markov chain', data: 'dataset',
+                      '3d': '3D scene', image: 'image project',
+                      numstab: 'matrix' };
+
+function tsBanner() {
+  let el = document.getElementById('ts-banner');
+  if (el) { el.textContent = ''; return el; }
+  el = document.createElement('div');
+  el.id = 'ts-banner';
+  el.className = 'ts-banner';
+  const bar = document.getElementById('topbar');
+  if (bar && bar.parentNode) bar.parentNode.insertBefore(el, bar.nextSibling);
+  else document.body.insertBefore(el, document.body.firstChild);
+  return el;
+}
+
+function tsBannerError(text) {
+  const el = tsBanner();
+  el.classList.add('ts-banner-err');
+  el.appendChild(document.createTextNode(text));
+}
+
+function tsBannerOk(data, token) {
+  const el = tsBanner();
+  el.classList.remove('ts-banner-err');
+
+  const tag = document.createElement('span');
+  tag.className = 'ts-banner-tag';
+  tag.textContent = 'Shared';
+  el.appendChild(tag);
+
+  const title = document.createElement('strong');
+  title.textContent = data.title || TOOL_LABELS[data.tool] || 'shared work';
+  el.appendChild(title);
+
+  if (data.save_id) {
+    const live = document.createElement('span');
+    live.className = 'ts-live';
+    live.textContent = 'live';
+    el.appendChild(live);
+  }
+
+  const note = document.createElement('span');
+  note.className = 'ts-banner-note';
+  note.textContent = data.save_id
+    ? 'Follows the owner\u2019s saved copy. Explore freely \u2014 your changes stay on this screen.'
+    : 'A snapshot. Explore freely \u2014 your changes stay on this screen.';
+  el.appendChild(note);
+
+  if (data.save_id) {
+    const refresh = document.createElement('button');
+    refresh.className = 'btn ts-btn';
+    refresh.textContent = 'Get latest';
+    refresh.addEventListener('click', () => tsLoadShare(token, true));
+    el.appendChild(refresh);
+  }
+
+  const blank = document.createElement('a');
+  blank.className = 'btn ts-btn';
+  blank.href = location.pathname;
+  blank.textContent = 'Start my own';
+  el.appendChild(blank);
+}
+
+async function tsLoadShare(token, quiet) {
+  const { data, error } = await fetchShare(token);
+  if (error) return tsBannerError('This shared link could not be opened: ' + error);
+  if (data.tool !== TS.tool) {
+    const page = TOOL_PAGES[data.tool];
+    if (page)
+      return location.replace(
+        new URL('../' + page, location.href).href + '?share=' + token);
+    return tsBannerError('This link is for a tool that no longer exists.');
+  }
+  const bad = await TS.restore(data.payload);
+  if (bad) return tsBannerError('This shared link could not be opened: ' + bad);
+  tsBannerOk(data, token);
+  if (quiet) {
+    const el = document.getElementById('ts-banner');
+    el.classList.add('ts-banner-flash');
+    setTimeout(() => el.classList.remove('ts-banner-flash'), 700);
+  }
+}
+
+function tsShareInit() {
+  const token = new URLSearchParams(location.search).get('share');
+  if (token) tsLoadShare(token, false);
+}
+
 function initToolSave(cfg) {
   TS = cfg;
+  const boot = () => { tsBuildUI(); tsShareInit(); };
   if (document.readyState === 'loading')
-    document.addEventListener('DOMContentLoaded', tsBuildUI);
+    document.addEventListener('DOMContentLoaded', boot);
   else
-    tsBuildUI();
+    boot();
 }
