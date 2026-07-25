@@ -8,16 +8,44 @@ from Tooltips import TooltipButton
 from pathlib import Path
 from bson import json_util
 from pymongo import MongoClient
+import sqlite3
 from PathFinder import resource_path
 
 class ThreeDViewer(QOpenGLWidget):
-    def __init__(self, initSolids, initLinesPlanes, namespace):
+    def __init__(self, new, initSolids, initLinesPlanes, namespace):
         super().__init__()
+        self.conn = sqlite3.connect(resource_path("./static/geometry.db"))
+        self.cursor = self.conn.cursor()
 
-        client = MongoClient("mongodb://localhost:27017/")
-        db = client["geometry"]
-        self.polygons = db["polygons"]
-        self.solids = db["solids"]
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS polygons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            data TEXT NOT NULL
+        )
+        """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS solids (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            data TEXT NOT NULL
+        )
+        """)
+
+        # Debugging purposes only
+        # self.cursor.execute("DELETE FROM polygons")
+        # self.cursor.execute("DELETE FROM solids")
+
+        self.conn.commit()
+
+        self.polygons = "polygons"
+        self.solids = "solids"
+
+        #client = MongoClient("mongodb://localhost:27017/")
+        #db = client["geometry"]
+        #self.polygons = db["polygons"]
+        #self.solids = db["solids"]
 
         #self.polygons.drop()
         #self.solids.drop()
@@ -25,18 +53,47 @@ class ThreeDViewer(QOpenGLWidget):
         self.objects = initSolids
         self.namespace = namespace
 
-        for json_file in resource_path("./Sample Shapes/Solids").glob("*.json"):
+        for json_file in resource_path("./static").glob("*.json"):
             try:
                 with open(json_file, "r") as file:
-                    res = self.solids.find_one({"name": json_file.name[:-5]})
+                    #res = self.solids.find_one({"name": json_file.name[:-5]})
+                    self.cursor.execute(
+                        "SELECT name, data FROM solids WHERE name = ?",
+                        (json_file.stem,)
+                    )
+
+                    row = self.cursor.fetchone()
+
+                    if row:
+                        res = {
+                            "name": row[0],
+                            **json.loads(row[1])
+                        }
+                    else:
+                        res = None
                     if not res:
-                        self.solids.insert_one(json_util.loads(file.read()))
+                        #self.solids.insert_one(json_util.loads(file.read()))
+                        data = json.loads(file.read())
+                        self.cursor.execute(
+                            """
+                            INSERT INTO solids(name, data)
+                            VALUES (?, ?)
+                            """,
+                            (
+                                data["name"],
+                                json.dumps({
+                                    "vertices": data["vertices"],
+                                    "edges": data["edges"],
+                                    "surfaces": data["surfaces"]
+                                })
+                            )
+                        )
             except Exception as e:
                 print(f"Error processing {json_file.name}: {e}")
         
-        if initSolids == []:
+        if not new and initSolids == []:
             try:
-                with open(resource_path("./Sample Shapes/Solids/Cube.json"), "r") as file:
+                with open(resource_path("./static/Cube.json"), "r") as file:
                     cube = json.load(file)
                     self.objects.append(Shapes.Solid("Cube-1", cube['vertices'], cube['edges'], cube['surfaces'], [1, 0, 0, 0]))
                     self.namespace.append("Cube")
@@ -200,6 +257,26 @@ class ThreeDSidePanel(QVBoxLayout):
 
         for linePlane in self.viewer.linesPlanes:
             self.linePlanePanel.addButton(linePlane)
+
+    def findSolids(self):
+        self.viewer.cursor.execute("SELECT name, data FROM solids")
+
+        solids = {}
+
+        for name, data in self.viewer.cursor.fetchall():
+            solids[name] = json.loads(data)
+        return solids
+    
+    def findPolygons(self):
+        self.viewer.cursor.execute("SELECT name, data FROM polygons")
+        
+        polygons = []
+
+        polygons = {}
+
+        for name, data in self.viewer.cursor.fetchall():
+            polygons[name] = json.loads(data)
+        return polygons
     
     def addLineWindow(self):
         self.window = ThreeDWindows.AddLineWindow()
@@ -536,7 +613,7 @@ class ThreeDSidePanel(QVBoxLayout):
         self.viewer.update()
     
     def addShapeWindow(self):
-        self.window = ThreeDWindows.AddShapeWindow(self.viewer.solids.find())
+        self.window = ThreeDWindows.AddShapeWindow(self.findSolids())
         self.window.show()
         self.window.params.connect(self.addShape)
     
@@ -545,16 +622,24 @@ class ThreeDSidePanel(QVBoxLayout):
             params[0].show()
         
         elif params[0] == "DeleteSolid!":
-            self.viewer.solids.delete_one({"name": params[1]})
-            self.window = ThreeDWindows.AddShapeWindow(self.viewer.solids.find())
+            #self.viewer.solids.delete_one({"name": params[1]})
+            self.viewer.cursor.execute(
+                "DELETE FROM solids WHERE name = ?",
+                (params[1],)
+            )
+            self.window = ThreeDWindows.AddShapeWindow(self.findSolids())
             self.window.show()
             self.window.params.connect(self.addShape)
 
         elif params[0] == "DeletePolygon!":
-            self.viewer.polygons.delete_one({"name": params[1]})
+            #self.viewer.polygons.delete_one({"name": params[1]})
+            self.viewer.cursor.execute(
+                "DELETE FROM polygons WHERE name = ?",
+                (params[1],)
+            )
             self.viewer.tempPolygon = None
             self.viewer.update()
-            self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+            self.window = ThreeDWindows.CustomPolygonWindow(self.findPolygons())
             self.window.show()
             self.window.params.connect(self.addShape)
         
@@ -563,18 +648,37 @@ class ThreeDSidePanel(QVBoxLayout):
             self.viewer.update()
         
         elif params[0] == "Custom!":
-            self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+            self.window = ThreeDWindows.CustomPolygonWindow(self.findPolygons())
             self.window.show()
             self.window.params.connect(self.addShape)
         
         elif params[0] == "Pyramid!" or params[0] == "Prism!":
-            res = self.viewer.solids.find_one({"name": params[1]})
-            if res != None:
+            #res = self.viewer.solids.find_one({"name": params[1]})
+            self.viewer.cursor.execute(
+                "SELECT name, data FROM solids WHERE name = ?",
+                (params[1],)
+            )
+            if self.viewer.cursor.fetchone():
                 self.errorWindow = ThreeDWindows.ErrorWindow(5, self.window)
                 self.errorWindow.show()
             else:
                 obj = Shapes.Polygon.makePyramid(self.viewer.tempPolygon, *params[1:]) if params[0] == "Pyramid!" else Shapes.Polygon.makePrism(self.viewer.tempPolygon, *params[1:]) 
-                self.viewer.solids.insert_one({"name": obj.name, "vertices": obj.vertices, "edges": obj.edges, "surfaces": obj.surfaces})
+                # self.viewer.solids.insert_one({"name": obj.name, "vertices": obj.vertices, "edges": obj.edges, "surfaces": obj.surfaces})
+                self.viewer.cursor.execute(
+                    """
+                    INSERT INTO solids(name, data)
+                    VALUES (?, ?)
+                    """,
+                    (
+                        obj.name,
+                        json.dumps({
+                            "vertices": obj.vertices,
+                            "edges": obj.edges,
+                            "surfaces": obj.surfaces
+                        })
+                    )
+                )
+                self.viewer.conn.commit()
                 self.viewer.namespace.append(obj.name)
                 no_duplicates = self.viewer.namespace.count(obj.name)
                 obj.name += f"-{no_duplicates}"
@@ -588,24 +692,52 @@ class ThreeDSidePanel(QVBoxLayout):
             polygon = params[0][0]
             self.viewer.tempPolygon = polygon
             self.viewer.update()
-            res = self.viewer.polygons.find_one({"name": polygon.name})
+            #res = self.viewer.polygons.find_one({"name": polygon.name})
+            self.viewer.cursor.execute(
+                "SELECT name, data FROM polygons WHERE name = ?",
+                (polygon.name,)
+            )
             if params[0][1] == None and params[0][2] == True:
                 self.window = ThreeDWindows.CustomSolidWindow(params[0][0])
                 self.window.show()
                 self.window.params.connect(self.addShape)
-            elif params[0][2] == -1 and res != None:
+            elif params[0][2] == -1 and self.viewer.cursor.fetchone():
                 self.errorWindow = ThreeDWindows.ErrorWindow(5, self.window)
                 self.errorWindow.show()
             else:
                 if params[0][2] == -1:
-                    self.viewer.polygons.insert_one({"name": polygon.name, "vertices": polygon.vertices, "edges": polygon.edges, "normal": polygon.normal})
-                    self.window = ThreeDWindows.CustomPolygonWindow(self.viewer.polygons.find())
+                    #self.viewer.polygons.insert_one({"name": polygon.name, "vertices": polygon.vertices, "edges": polygon.edges, "normal": polygon.normal})
+                    self.viewer.cursor.execute(
+                        """
+                        INSERT INTO polygons(name, data)
+                        VALUES (?, ?)
+                        """,
+                        (
+                            polygon.name,
+                            json.dumps({
+                                "vertices": polygon.vertices,
+                                "edges": polygon.edges,
+                                "normal": polygon.normal
+                            })
+                        )
+                    )
+                    self.viewer.conn.commit()
+                    self.window = ThreeDWindows.CustomPolygonWindow(self.findPolygons())
                     self.window.show()
                     self.window.params.connect(self.addShape)
         
         else:
             shape, nums = params[0], params[1:]
-            solid = self.viewer.solids.find_one({"name": shape})
+            #solid = self.viewer.solids.find_one({"name": shape})
+            self.viewer.cursor.execute(
+                "SELECT name, data FROM solids WHERE name = ?",
+                (shape,)
+            )
+            row = self.viewer.cursor.fetchone()
+            solid = {
+                "name": row[0],
+                **json.loads(row[1])
+            }
             obj = Shapes.Solid(solid["name"], solid["vertices"], solid["edges"], solid["surfaces"], nums)
             self.viewer.namespace.append(obj.name)
             no_duplicates = self.viewer.namespace.count(obj.name)

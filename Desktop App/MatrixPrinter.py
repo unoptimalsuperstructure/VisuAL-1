@@ -34,11 +34,9 @@ def toString(lst, acc):
 
 def concat(lst):
     a = [None]*len(lst[0])
-    if len(lst[0]) != len(a):
-        return "Error: This operation only works on square matrices of the same size"
     for arr in lst:
-        if len(arr) != len(a) or len(arr[0]) != len(a):
-            return "Error: This operation only works on square matrices of the same size"
+        if len(arr) != len(a):
+            return "Error: Invalid matrix dimensions"
         i = 0
         for line in arr:
             if a[i]:
@@ -48,7 +46,7 @@ def concat(lst):
             i += 1
     return(str(a).replace("[[[", "[").replace("]]]", "]").replace("[[", "[").replace("]], ", "]\n").replace(",", "").replace("'", ""))
 
-def displayAsMatrix(matrix: list, aug: bool):
+def displayAsMatrix(matrix: list, augcol: int):
     res = ""
     i = 0
     for line in matrix:
@@ -57,7 +55,7 @@ def displayAsMatrix(matrix: list, aug: bool):
         for entry in line:
             string += entry
             j += 1
-            string += " " if j < len(line) - 1 else (" | " if aug else " ") if j == len(line) - 1 else "]"
+            string += (" | " if j + augcol == len(line) else " ") if j < len(line) else "]"
         res += string
         i += 1
         res += "\n" if i < len(matrix) else ""

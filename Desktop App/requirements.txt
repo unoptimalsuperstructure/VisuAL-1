@@ -1,0 +1,10 @@
+PyQt6
+numpy
+PyOpenGL
+opencv-python
+qimage2ndarray
+pymongo
+networkx
+pyqtgraph
+scipy
+sympy

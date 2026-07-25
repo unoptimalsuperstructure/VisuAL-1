@@ -285,6 +285,13 @@ class TwoDSidePanel(QVBoxLayout):
                             self.viewer.images[i] = img
                             newOps.append(img.name)
                             break
+            elif params[0] == "Colour Rotation":
+                for img in ColourRotation(*params[1:]).apply(self.activeLayers):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
             elif params[0] == "Grayscale":
                 for img in GrayscaleFilter(params[1]).apply(self.activeLayers):
                     for i in range(len(self.viewer.images)):
@@ -356,6 +363,13 @@ class TwoDSidePanel(QVBoxLayout):
                             break
             elif params[0] == "Sobel":
                 for img in BlankConvolution("Edge Detection").applySobel(self.activeLayers):
+                    for i in range(len(self.viewer.images)):
+                        if self.viewer.images[i].name == img.name:
+                            self.viewer.images[i] = img
+                            newOps.append(img.name)
+                            break
+            elif params[0] == "SVD Compression":
+                for img in BlankConvolution("SVD Compression").applyCompression(self.activeLayers, params[1]):
                     for i in range(len(self.viewer.images)):
                         if self.viewer.images[i].name == img.name:
                             self.viewer.images[i] = img

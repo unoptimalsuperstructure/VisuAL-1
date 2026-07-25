@@ -1,19 +1,25 @@
 # VisuAL-1
-**Current version: v0.2.0**
+**Current version: v0.2.1d**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
 # License
 As all of the libraries that this tool uses are licensed under GPLv3 (or more permissive licenses), this tool is also licensed under GPLv3.
 
-# Python Libraries required
+# Python Version and Libraries required
+Python version 3.12 and above is required, along with the following libraries:
+- NetworkX
 - NumPy
 - OpenCV-Python
-- PyMongo
 - PyOpenGL
 - PyQt6 (NOT PySide6)
 - qimage2ndarray
+- SciPy
 - SymPy
+
+Assuming you have pip installed, the pip command to install all of the above libraries is:
+
+<code>pip install networkx numpy opencv-python pyopengl pyqt6 qimage2ndarray scipy sympy</code>
 
 # 2D Image Processing
 
@@ -51,6 +57,10 @@ Web App Controls (Spherical Coordinates):
 
 **Note:** Undo works on a **global** level, i.e. the operation stack is independent of the currently active object. All other features are tied to the currently active object.
 
+# Markov Chains
+
+Features: Import a CSV of a transition matrix (DTMC) or Q-matrix (CTMC), or form your own matrix and initial distribution vector. Then, visualise the movement through the graph (nodes and edges), and see the changes over time in the line graph.
+
 # Known Bugs
 ## High Priority
 ~~- (2D Image Processing, Desktop App) Images are not garbage collected upon closing the window, which returns to the home screen. This will be fixed by the next update.~~ (Fixed in v0.1.1b)
@@ -59,6 +69,33 @@ Web App Controls (Spherical Coordinates):
 - (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
 
 # Changelog
+v0.2.1c -> v0.2.1d
+- Added matrix inversion and some bug fixes
+
+v0.2.1b -> v0.2.1c
+- Changed 3D sandbox DB backend to SQLite instead of MongoDB
+
+v0.2.1a -> v0.2.1b
+- Fixed premature DTMC convergence issue
+- Added CTMCs
+- Minor stylesheet changes
+
+v0.2.0b2 -> v0.2.1a
+- Native light and dark themes now available
+- Fixed DTMC prototype visualisation bugs
+
+v0.2.0b1 -> v0.2.0b2
+- LUP factorisation added for numerical stability
+- DTMC prototype visualisation now available, but many of the buttons do nothing so far
+
+v0.2.0a -> v0.2.0b1
+- Fixed matrix aliasing bug
+- Added reset button so that the DP for calculations can be tweaked without reloading the CSV
+- Added colour space rotation and low-rank approximation of full images
+
+v0.2.0a
+- Added GEPP, MGS and orthogonality error measured using Frobenius norm.
+
 v0.1.4c -> v0.2.0
 - Merged!
 

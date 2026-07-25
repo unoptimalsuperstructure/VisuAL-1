@@ -15,7 +15,8 @@ class Tooltip(QWidget):
         self.resize(300, 100)
         self.setStyleSheet("""
             QWidget {
-                background-color: #ffffff;
+                background-color: white;
+                color: black;
             }
         """)
         layout = QHBoxLayout()

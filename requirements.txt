@@ -1,7 +1,0 @@
-numpy
-opencv-python
-pymongo
-PyOpenGL
-PyQt6
-qimage2ndarray
-sympy

@@ -10,7 +10,7 @@ def num(x):
         return 0
     else:
         try:
-            return float(x)
+            return eval(x)
         except:
             return None
         
@@ -138,6 +138,9 @@ class ConvolutionWindow(QWidget):
             sobel = QRadioButton("Sobel Edge Detection")
             sobel.toggled.connect(self.sobel)
             convListLayout.addWidget(sobel)
+            compress = QRadioButton("SVD Compression")
+            compress.toggled.connect(self.compress)
+            convListLayout.addWidget(compress)
             custom = QRadioButton("Custom Convolution Kernel")
             custom.toggled.connect(self.custom)
             convListLayout.addWidget(custom)
@@ -276,6 +279,28 @@ class ConvolutionWindow(QWidget):
         values.setLayout(self.valuesLayout)
         self.layout.addWidget(values, 1, 1, 1, 1)
     
+    def compress(self):
+        self.layout.removeWidget(self.submit)
+        while self.valuesLayout.count() > 0:
+            widget = self.valuesLayout.itemAt(0).widget()
+            self.valuesLayout.removeWidget(widget)
+            widget.deleteLater()
+
+        self.v = QSpinBox()
+        self.v.setRange(1, 99)
+        self.v.setValue(70)
+        self.valuesLayout.addWidget(QLabel("Quality:"), 0, 0)
+        self.valuesLayout.addWidget(self.v, 0, 1)
+        self.valuesLayout.addWidget(QLabel("*Note: Non-linear convolution\n\nWarning: This feature may take\na while depending on image size!\nThis is an artistic convolution\nand not a practical real-world\nimage compression algorithm."), 1, 0, 1, 2)
+
+        self.submit = QPushButton("Submit")
+        self.submit.clicked.connect(self.compressSend)
+        self.layout.addWidget(self.submit, 2, 0, 1, 2)
+
+        values = QWidget()
+        values.setLayout(self.valuesLayout)
+        self.layout.addWidget(values, 1, 1, 1, 1)
+    
     def custom(self):
         self.layout.removeWidget(self.submit)
         self.valid = False
@@ -405,6 +430,11 @@ class ConvolutionWindow(QWidget):
     def sobelSend(self):
         self.params.emit(["Sobel"])
         self.close()
+
+    def compressSend(self):
+        v = self.v.value() / 100
+        self.params.emit(["SVD Compression", v])
+        self.close()
     
     def customSend(self):
         if self.valid:
@@ -432,6 +462,9 @@ class ColourWindow(QWidget):
             colourAdjust = QRadioButton("Colour Adjustment")
             colourAdjust.toggled.connect(self.colourAdjustment)
             filterListLayout.addWidget(colourAdjust)
+            colourRotate = QRadioButton("Colour Rotation")
+            colourRotate.toggled.connect(self.colourRotation)
+            filterListLayout.addWidget(colourRotate)
             grayscale = QRadioButton("Grayscale")
             grayscale.toggled.connect(self.grayscaleFilter)
             filterListLayout.addWidget(grayscale)
@@ -452,7 +485,10 @@ class ColourWindow(QWidget):
         self.setLayout(self.layout)
     
     def colourAdjustment(self):
-        self.layout.removeWidget(self.submit)
+        try:
+            self.layout.removeWidget(self.submit)
+        except:
+            pass
         while self.valuesLayout.count() > 0:
             widget = self.valuesLayout.itemAt(0).widget()
             self.valuesLayout.removeWidget(widget)
@@ -509,8 +545,46 @@ class ColourWindow(QWidget):
         values.setLayout(self.valuesLayout)
         self.layout.addWidget(values, 1, 1, 1, 1)
 
+    def colourRotation(self):
+        try:
+            self.layout.removeWidget(self.submit)
+            self.submit.deleteLater()
+        except:
+            pass
+        while self.valuesLayout.count() > 0:
+            widget = self.valuesLayout.itemAt(0).widget()
+            self.valuesLayout.removeWidget(widget)
+            widget.deleteLater()
+        rbg = QRadioButton("RBG")
+        rbg.setObjectName("RBG")
+        rbg.clicked.connect(self.rotation)
+        self.valuesLayout.addWidget(rbg, 1, 0)
+        grb = QRadioButton("GRB")
+        grb.setObjectName("GRB")
+        grb.clicked.connect(self.rotation)
+        self.valuesLayout.addWidget(grb, 2, 0)
+        gbr = QRadioButton("GBR")
+        gbr.setObjectName("GBR")
+        gbr.clicked.connect(self.rotation)
+        self.valuesLayout.addWidget(gbr, 3, 0)
+        brg = QRadioButton("BRG")
+        brg.setObjectName("BRG")
+        brg.clicked.connect(self.rotation)
+        self.valuesLayout.addWidget(brg, 4, 0)
+        bgr = QRadioButton("BGR")
+        bgr.setObjectName("BGR")
+        bgr.clicked.connect(self.rotation)
+        self.valuesLayout.addWidget(bgr, 5, 0)
+
+        values = QWidget()
+        values.setLayout(self.valuesLayout)
+        self.layout.addWidget(values, 1, 1, 1, 1)
+
     def grayscaleFilter(self):
-        self.layout.removeWidget(self.submit)
+        try:
+            self.layout.removeWidget(self.submit)
+        except:
+            pass
         while self.valuesLayout.count() > 0:
             widget = self.valuesLayout.itemAt(0).widget()
             self.valuesLayout.removeWidget(widget)
@@ -535,7 +609,10 @@ class ColourWindow(QWidget):
         self.layout.addWidget(values, 1, 1, 1, 1)
 
     def sepiaFilter(self):
-        self.layout.removeWidget(self.submit)
+        try:
+            self.layout.removeWidget(self.submit)
+        except:
+            pass
         while self.valuesLayout.count() > 0:
             widget = self.valuesLayout.itemAt(0).widget()
             self.valuesLayout.removeWidget(widget)
@@ -560,7 +637,10 @@ class ColourWindow(QWidget):
         self.layout.addWidget(values, 1, 1, 1, 1)
     
     def inversionFilter(self):
-        self.layout.removeWidget(self.submit)
+        try:
+            self.layout.removeWidget(self.submit)
+        except:
+            pass
         while self.valuesLayout.count() > 0:
             widget = self.valuesLayout.itemAt(0).widget()
             self.valuesLayout.removeWidget(widget)
@@ -594,6 +674,21 @@ class ColourWindow(QWidget):
         self.params.emit(["Colour Filter", relR, relG, relB, 1, absR, absG, absB, 0])
         self.close()
     
+    def rotation(self):
+        try:
+            self.layout.removeWidget(self.submit)
+        except:
+            pass
+        self.submit = QPushButton("Submit")
+        self.submit.clicked.connect(self.rotationSend)
+        self.layout.addWidget(self.submit, 2, 0, 1, 2)
+        rb = self.sender()
+        self.rotationType = rb.objectName()
+    
+    def rotationSend(self):
+        self.params.emit(["Colour Rotation", self.rotationType])
+        self.close()
+
     def grayscaleSend(self):
         v = self.v.value() / 100
         self.params.emit(["Grayscale", v])

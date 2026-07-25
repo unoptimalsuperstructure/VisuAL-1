@@ -48,7 +48,23 @@ class Image:
             if isinstance(op[2], Filter) or isinstance(op[2], Convolution):
                 temp = op[2].applyToRawImage(temp)
             elif isinstance(op[2], IndividualConvolution): # Non-standard convolution such as Sobel or unmasked sharpening
-                temp = op[2].get(temp)
+                if isinstance(op[2], Compress):
+                    channels = temp.shape[2] if len(temp.shape) == 3 else 1
+                    if channels == 1:
+                        temp = op[2].get(temp)
+                    elif channels == 3:
+                        b, g, r = cv2.split(temp)
+                        b = op[2].get(b)
+                        g = op[2].get(g)
+                        r = op[2].get(r)
+                        temp = cv2.merge([b, g, r])
+                    else:
+                        b, g, r, a = cv2.split(temp)
+                        b = op[2].get(b)
+                        g = op[2].get(g)
+                        r = op[2].get(r)
+                        a = a.astype(np.uint8)
+                        temp = cv2.merge([b, g, r, a])
                 if isinstance(temp, tuple):
                     temp = temp[0]
             elif isinstance(op[2], list) and op[2][0] == "Crop":
@@ -198,6 +214,16 @@ class ColourFilter(Filter):
                                    [0, 0, relR, 0, absR],
                                    [0, 0, 0, relA, absA]]), "Colour Filter")
 
+class ColourRotation(Filter):
+    def __init__(self, rotation):
+        colourDict = {"RGB": np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0]]),
+                      "RBG": np.array([[1, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 1, 0]]),
+                      "GRB": np.array([[0, 1, 0, 0, 0], [1, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0]]),
+                      "GBR": np.array([[0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0]]),
+                      "BRG": np.array([[0, 0, 1, 0, 0], [1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 1, 0]]),
+                      "BGR": np.array([[0, 0, 1, 0, 0], [0, 1, 0, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0]])}
+        super().__init__(colourDict[rotation], "Colour Rotation")
+
 class Convolution:
     def __init__(self, type, params, name):
         self.type = type
@@ -235,6 +261,30 @@ class Convolution:
         for layer in layers:
             sharpen = Sharpen(v)
             layer.img.stack.append([sharpen.get(layer.img.stack[-1][0]), layer.img.channels, sharpen])
+            self.result.append(layer.img)
+            layer.img.matrixStack.append([self.matrix, self.name])
+        return self.result
+    
+    def applyCompression(self, layers, v):
+        for layer in layers:
+            compress = Compress(v)
+            image = layer.img.stack[-1][0]
+            if layer.img.channels == 1:
+                layer.img.stack.append([compress.get(layer.img.stack[-1][0]), 1, compress])
+            elif layer.img.channels == 3:
+                b, g, r = cv2.split(image)
+                b = compress.get(b)
+                g = compress.get(g)
+                r = compress.get(r)
+                layer.img.stack.append([cv2.merge([b, g, r]), 3, compress])
+            else:
+                b, g, r, a = cv2.split(image)
+                b = compress.get(b)
+                g = compress.get(g)
+                r = compress.get(r)
+                a = a.astype(np.uint8)
+                layer.img.stack.append([cv2.merge([b, g, r, a]), 4, compress])
+            
             self.result.append(layer.img)
             layer.img.matrixStack.append([self.matrix, self.name])
         return self.result
@@ -335,6 +385,30 @@ class Sobel(IndividualConvolution):
         rgba[:, :, 2] = 0  # Red
         rgba[:, :, 3] = bwImg
         return rgba
+
+class Compress(IndividualConvolution):
+    def __init__(self, v):
+        super().__init__([v])
+    
+    def get(self, image):
+        quality = self.params[0]
+        image = image.astype(np.float32)
+        if len(image.shape) == 3:
+            if image.shape[2] == 3:
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            else:
+                image = cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
+        u, sigma, v = np.linalg.svd(image)
+        evrArray = np.cumsum(sigma)
+        i = 0
+        while i < len(evrArray):
+            if evrArray[i] / evrArray[-1] > quality:
+                break
+            i += 1
+        uk = u[:, :i + 1]
+        sk = np.diag(sigma[:i + 1])
+        vk = v[:i + 1, :]
+        return np.clip(np.dot(uk, np.dot(sk, vk)), 0, 255).astype(np.uint8)
 
 class Custom(IndividualConvolution):
     def __init__(self, matrix, n):
