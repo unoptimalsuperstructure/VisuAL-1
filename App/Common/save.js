@@ -2,6 +2,49 @@
 
 let TS = null;
 
+let tsActiveSaveId = null;
+let tsLiveSaveIds = new Set();
+let tsWatch = null, tsLastFp = null, tsLastPush = 0, tsFails = 0;
+
+function tsSetActive(id) { tsActiveSaveId = id; tsSyncWatch(); }
+
+async function tsLoadLiveSet() {
+  const { data } = await listShares();
+  tsLiveSaveIds = new Set((data || [])
+    .filter(r => r.save_id && r.tool === TS.tool)
+    .map(r => r.save_id));
+  tsSyncWatch();
+}
+
+function tsSyncWatch() {
+  const want = tsActiveSaveId && tsLiveSaveIds.has(tsActiveSaveId);
+  if (want && !tsWatch) {
+    tsLastFp = null; tsFails = 0;
+    tsWatch = setInterval(tsAutoPush, 4000);
+  } else if (!want && tsWatch) {
+    clearInterval(tsWatch); tsWatch = null;
+  }
+}
+
+async function tsAutoPush() {
+  try {
+    if (TS.empty && TS.empty()) return;
+    const fp = TS.fingerprint ? TS.fingerprint()
+                              : JSON.stringify(TS.serialise());
+    if (fp === tsLastFp) return;
+    if (Date.now() - tsLastPush < 8000) return;
+    const r = await updateSave(tsActiveSaveId, { payload: TS.serialise() });
+    if (r.error) {
+      if (++tsFails >= 3) {
+        clearInterval(tsWatch); tsWatch = null;
+        console.warn('Live sync stopped:', r.error);
+      }
+      return;
+    }
+    tsFails = 0; tsLastFp = fp; tsLastPush = Date.now();
+  } catch (_) {}
+}
+
 function tsMsg(text, isErr) {
   const el = document.getElementById('ts-msg');
   if (!el) return;
@@ -44,6 +87,7 @@ async function tsOpen() {
   tsMsg('');
   tsRefreshList();
   tsRefreshShares();
+  tsLoadLiveSet();
 }
 
 async function tsRefreshList() {
@@ -76,6 +120,7 @@ async function tsRefreshList() {
       if (got.error) return tsMsg(got.error, true);
       const bad = await TS.restore(got.data.payload);
       if (bad) return tsMsg(bad, true);
+      tsSetActive(row.id);
       tsMsg(`Loaded "${row.name}".`);
       document.getElementById('ts-modal').style.display = 'none';
     });
@@ -84,6 +129,7 @@ async function tsRefreshList() {
       if (why) return tsMsg(typeof why === 'string' ? why : 'Nothing to save yet.', true);
       const r = await updateSave(row.id, { payload: TS.serialise() });
       if (r.error) return tsMsg(r.error, true);
+      tsSetActive(row.id);
       tsMsg(`Updated "${row.name}" with the current state — live links now show it.`);
       tsRefreshList();
     });
@@ -111,6 +157,7 @@ function tsShareResult(r) {
   tsMsg('Share link created and copied — anyone with it can view ' +
         (r.data.save_id ? '(live: it follows this save).' : '(frozen snapshot).'));
   tsRefreshShares();
+  tsLoadLiveSet();
 }
 
 function tsExpiry() {
@@ -179,6 +226,7 @@ async function tsRefreshShares() {
       if (r.error) return tsMsg(r.error, true);
       tsMsg('Share link deleted — the URL no longer works.');
       tsRefreshShares();
+      tsLoadLiveSet();
     }, true);
 
     listEl.appendChild(item);
@@ -195,6 +243,7 @@ async function tsSaveCurrent() {
   const { data, error } = await saveTool(TS.tool, name, TS.serialise());
   if (error) return tsMsg(error, true);
   nameEl.value = '';
+  tsSetActive(data.id);
   tsMsg(`Saved "${data.name}".`);
   tsRefreshList();
 }

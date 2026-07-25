@@ -254,9 +254,9 @@ function frLayout(nodes, edges, W, H) {
         P[j].y += (Math.random() - 0.5) * 20;
       }
  
-  const k = 0.1 * Math.sqrt((W * H) / n);
+  const k = 0.8 * Math.sqrt((W * H) / n);
   const ITER = 250;
-  let temp = Math.max(W, H) / 50;
+  let temp = Math.max(W, H) / 8;
   const cool = Math.pow(1 / temp, 1 / ITER);
  
   const disp = P.map(() => ({ x: 0, y: 0 }));
@@ -300,10 +300,32 @@ function frLayout(nodes, edges, W, H) {
     minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
   }
   const bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY);
-  const scale = Math.min((W - 2 * M) / bw, (H - 2 * M) / bh, 1.6);
+
+  const scale = Math.max(0.05, Math.min((W - 2 * M) / bw, (H - 2 * M) / bh, 1.6));
   const ox = W / 2 - scale * (minX + bw / 2);
   const oy = H / 2 - scale * (minY + bh / 2);
-  return P.map(p => ({ x: p.x * scale + ox, y: p.y * scale + oy }));
+  const out = P.map(p => ({ x: p.x * scale + ox, y: p.y * scale + oy }));
+
+  const minSep = NODE_R * 2.4;
+  for (let pass = 0; pass < 12; pass++) {
+    let moved = false;
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++) {
+        let dx = out[j].x - out[i].x, dy = out[j].y - out[i].y;
+        let d = Math.hypot(dx, dy);
+        if (d >= minSep) continue;
+        if (d < 0.5) {
+          const a = Math.random() * 2 * Math.PI;
+          dx = Math.cos(a); dy = Math.sin(a); d = 1;
+        } else { dx /= d; dy /= d; }
+        const push = (minSep - d) / 2;
+        out[i].x -= dx * push; out[i].y -= dy * push;
+        out[j].x += dx * push; out[j].y += dy * push;
+        moved = true;
+      }
+    if (!moved) break;
+  }
+  return out;
 }
  
 let neatenAnim = 0;
