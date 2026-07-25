@@ -24,12 +24,12 @@ jobs:
     - name: Install Python dependencies
       run: |
         pip install -r requirements.txt
-      working-directory: ./
+      working-directory: 'Desktop App'
 
     - name: Install PyInstaller
       run: |
         pip install pyinstaller pyinstaller-hooks-contrib
-      working-directory: ./
+      working-directory: 'Desktop App'
 
     - name: Build executable
       shell: bash
@@ -43,29 +43,30 @@ jobs:
         done
         ARGS+=("$MAIN_PY_FILE")
         pyinstaller "${ARGS[@]}"
-      working-directory: ./
+      working-directory: 'Desktop App'
 
     - name: Create Artifact (Windows)
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: windows-executables
-        path: dist/
+        path: 'Desktop App/dist/'
 
     - name: Create Artifact (Linux)
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
         name: linux-executables
-        path: dist/
+        path: 'Desktop App/dist/'
 
     - name: Create Artifact (macOS)
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
         name: macos-executables
-        path: dist/
+        path: 'Desktop App/dist/'
 
     - name: List files in dist folder
       shell: bash
-      run: ls -R ./dist/
+      run: ls -R dist/
+      working-directory: 'Desktop App'
