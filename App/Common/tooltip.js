@@ -1,5 +1,14 @@
 'use strict';
 
+function escapeHTML(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const TIP_DELAY_MS = 200;
 
 let tipEl = null;
