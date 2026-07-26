@@ -159,4 +159,4 @@ pre.matrix {
   color: var(--text);
 }
 .mtx-grid input:focus { outline: none; border-color: var(--text); }
-.mtx-grid input.err { border-color: #d6455c; }
+.mtx-grid input.err { border-color: #ff002b; }
