@@ -84,6 +84,7 @@ function syncCubeMesh(obj) {
     ep.array.set(v[b], i * 6 + 3);
   }
   ep.needsUpdate = true;
+  m.edgeLine.geometry.computeBoundingSphere();
   m.edgeLine.material.opacity = isActive ? 1.0 : 0.4;
 
   if (obj.shadowVerts) {
@@ -104,6 +105,7 @@ function syncCubeMesh(obj) {
       sep.array.set(sv[b], i * 6 + 3);
     }
     sep.needsUpdate = true;
+    m.shadowEdge.geometry.computeBoundingSphere();
     m.shadowEdge.material.opacity = 0.3;
   } else {
     m.shadowFaces.forEach(f => { f.material.opacity = 0; });
@@ -224,8 +226,6 @@ function clearTransformVis(objId) {
   removeTransformVis(objId);
 }
 
-
-
 const origApplyTransform = SceneObj.prototype.applyTransform;
 SceneObj.prototype.applyTransform = function(mat, name) {
   this.shadowVerts = this.vertices.map(v => [...v]);
@@ -293,14 +293,22 @@ onFrame = () => {
 };
 
 
+function rebuildAllMeshes() {
+  for (const id of Array.from(objMeshes.keys())) removeMesh(id);
+  objects.forEach(obj => {
+    if (obj.shadowVerts === undefined) obj.shadowVerts = null;
+    buildMesh(obj);
+  });
+}
+
 const lpMeshes = new Map();
- 
+
 function syncLinesPlanes() {
   if (typeof SAVED_LP === 'undefined') return;
   const live = new Set(SAVED_LP.map(o => o.id));
   for (const [id, mesh] of lpMeshes)
     if (!live.has(id)) { scene.remove(mesh); lpMeshes.delete(id); }
- 
+
   for (const o of SAVED_LP) {
     if (lpMeshes.has(o.id)) continue;
     let mesh;
@@ -341,4 +349,3 @@ function syncLinesPlanes() {
     lpMeshes.set(o.id, mesh);
   }
 }
- 

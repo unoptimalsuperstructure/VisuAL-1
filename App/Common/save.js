@@ -155,7 +155,7 @@ function tsShareResult(r) {
   out.select();
   try { navigator.clipboard?.writeText(r.data.url); } catch (_) {}
   tsMsg('Share link created and copied — anyone with it can view ' +
-        (r.data.save_id ? '(live: it follows this save).' : '(frozen snapshot).'));
+        (r.data.save_id ? '(live: it follows this save — and your edits now sync to it automatically).' : '(frozen snapshot).'));
   tsRefreshShares();
   tsLoadLiveSet();
 }
@@ -199,7 +199,7 @@ async function tsRefreshShares() {
       const days = Math.max(0, Math.ceil((new Date(row.expires_at) - Date.now()) / 864e5));
       exp.textContent = days + 'd';
       exp.title = 'Expires ' + new Date(row.expires_at).toLocaleString() +
-                  ' but each visit extends it by 7 days.';
+                  ' — each visit extends it by 7 days.';
     } else {
       exp.textContent = '\u221e';
       exp.title = 'Never expires.';
@@ -429,6 +429,12 @@ function tsShareInit() {
 
 function initToolSave(cfg) {
   TS = cfg;
+  if (!TS.serialize && TS.serialise) TS.serialize = TS.serialise;
+  if (!TS.fingerprint && TS.fingerPrint) TS.fingerprint = TS.fingerPrint;
+  if (typeof TS.serialize !== 'function' || typeof TS.restore !== 'function')
+    console.error('initToolSave: needs both a serialize (or serialise) and a ' +
+                  'restore function — saving will not work for tool "' +
+                  TS.tool + '".');
   const boot = () => { tsBuildUI(); tsShareInit(); };
   if (document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', boot);

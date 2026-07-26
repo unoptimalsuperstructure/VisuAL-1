@@ -25,7 +25,7 @@ function restore3D(p) {
   for (const o of p.objects) {
     const obj = new SceneObj(o.type, o.initArgs ?? null);
     for (const [m, n] of (o.stack || []))
-      obj.applyTransform(m.map(Number), String(n));
+      obj.applyTransform(m.map(Number), String(n).slice(0, 40));
     objects.push(obj);
   }
   activeId = objects.length ? objects[objects.length - 1].id : null;
@@ -34,14 +34,19 @@ function restore3D(p) {
   for (const lp of (Array.isArray(p.savedLP) ? p.savedLP : [])) {
     if ((lp.kind === 'line' || lp.kind === 'plane') && lp.p)
       SAVED_LP.push({ id: SAVED_LP.length + 1, kind: lp.kind,
-                      name: String(lp.name ?? lp.kind), p: lp.p });
+                      name: String(lp.name ?? lp.kind).slice(0, 40), p: lp.p });
   }
   lpCounter = SAVED_LP.length;
 
   renderObjList();
   renderStack();
   afterLPChange();
+  if (typeof rebuildAllMeshes === 'function') rebuildAllMeshes();
   return null;
+}
+
+if (typeof objects === 'undefined' || typeof SceneObj === 'undefined') {
+  console.error('Flag.');
 }
 
 initToolSave({

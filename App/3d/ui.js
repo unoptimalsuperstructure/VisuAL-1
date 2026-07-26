@@ -1,6 +1,6 @@
 let objects = [new SceneObj()];
 let activeId = null;
-const sectionOpen = { objects: true, transforms: true };
+const sectionOpen = { objects: true, transforms: true, lp: true };
 
 function getActive() { 
   return objects.find(o => o.id === activeId) || null; 
@@ -64,7 +64,7 @@ function renderStack() {
     const head = document.createElement('div');
     head.className = 'matrix-card-head' + (isCollapsed ? ' collapsed' : '');
     head.innerHTML =
-      `<span class="card-left"><span class="card-chevron">▾</span><span>${name || '—'}</span></span>` +
+      `<span class="card-left"><span class="card-chevron">▾</span><span>${escapeHTML(name || '—')}</span></span>` +
       `<span class="idx">[${idx}]</span>`;
     head.onclick = () => {
       if (collapsedCards.has(cardId)) collapsedCards.delete(cardId);
@@ -137,6 +137,12 @@ const MODAL_CONFIGS = {
     matrix: v => (v.d1 || v.d2 || v.d3)
       ? reflectLineMatrix(v.a1, v.a2, v.a3, v.d1, v.d2, v.d3) : null,
     fields: [{id:'a1',label:'a1'},{id:'a2',label:'a2'},{id:'a3',label:'a3'},{id:'d1',label:'d1'},{id:'d2',label:'d2'},{id:'d3',label:'d3'}],
+
+    layout: { lead: 'r =', blocks: [
+      { cols: 1, ids: ['a1','a2','a3'] },
+      { text: '+ t' },
+      { cols: 1, ids: ['d1','d2','d3'] },
+    ] },
     apply(vals, obj) {
       const {a1,a2,a3,d1,d2,d3} = vals;
       if (d1===0 && d2===0 && d3===0) throw new Error('Direction vector cannot be zero');
@@ -152,6 +158,8 @@ const MODAL_CONFIGS = {
     matrix: v => (v.d1 || v.d2 || v.d3)
       ? rotateLineMatrix(v.d1, v.d2, v.d3, v.angle * Math.PI / 180) : null,
     fields: [{id:'d1',label:'d1'},{id:'d2',label:'d2'},{id:'d3',label:'d3'},{id:'angle',label:'Angle (°)'}],
+    // Direction as a column vector; the angle stays an ordinary labelled row.
+    layout: { lead: 'd =', blocks: [{ cols: 1, ids: ['d1','d2','d3'] }] },
     apply(vals, obj) {
       const {d1,d2,d3,angle} = vals;
       if (d1===0 && d2===0 && d3===0) throw new Error('Direction vector cannot be zero');
@@ -211,6 +219,14 @@ const MODAL_CONFIGS = {
       {id:'a1',label:'line x₀'},{id:'a2',label:'line y₀'},{id:'a3',label:'line z₀'},
       {id:'d1',label:'line dx'},{id:'d2',label:'line dy'},{id:'d3',label:'line dz'},
     ],
+
+    layout: { lead: 'r =', blocks: [
+      { cols: 1, ids: ['a1','a2','a3'] },
+      { text: '+ t' },
+      { cols: 1, ids: ['d1','d2','d3'] },
+      { text: '  shear dir' },
+      { cols: 1, ids: ['c1','c2','c3'] },
+    ] },
     apply(vals, obj) {
       const {k,c1,c2,c3,a1,a2,a3,d1,d2,d3} = vals;
       if (d1===0 && d2===0 && d3===0) throw new Error('Invariant line direction cannot be zero');
@@ -235,6 +251,10 @@ const MODAL_CONFIGS = {
       {id:'m21',label:'m₂₁'},{id:'m22',label:'m₂₂',default:1},{id:'m23',label:'m₂₃'},
       {id:'m31',label:'m₃₁'},{id:'m32',label:'m₃₂'},{id:'m33',label:'m₃₃',default:1},
     ],
+
+    layout: { lead: 'M =', blocks: [
+      { cols: 3, ids: ['m11','m12','m13','m21','m22','m23','m31','m32','m33'] },
+    ] },
     apply(vals, obj) {
       const m = [vals.m11,vals.m12,vals.m13, vals.m21,vals.m22,vals.m23, vals.m31,vals.m32,vals.m33];
       const I = [1,0,0, 0,1,0, 0,0,1];
@@ -311,7 +331,7 @@ function renderLPList() {
     const desc = o.kind === 'line'
       ? `(${o.p.a1}, ${o.p.a2}, ${o.p.a3}) + t·(${o.p.d1}, ${o.p.d2}, ${o.p.d3})`
       : `${o.p.a}x + ${o.p.b}y + ${o.p.c}z = ${o.p.d}`;
-    return `<div class="lp-row"><span class="lp-name">${o.name}</span>` +
+    return `<div class="lp-row"><span class="lp-name">${escapeHTML(o.name)}</span>` +
            `<span class="lp-desc">${desc}</span>` +
            `<button class="lp-del" data-tip="Remove this ${o.kind}" onclick="deleteSavedLP(${o.id})">×</button></div>`;
   }).join('');
@@ -328,7 +348,51 @@ function openModal(type) {
   document.getElementById('modal-err').textContent = '';
   const fc = document.getElementById('modal-fields');
   fc.innerHTML = '';
+
+  const laidOut = new Set();
+  if (cfg.layout) {
+    const defaults = {};
+    cfg.fields.forEach(f => { defaults[f.id] = f.default ?? 0; });
+
+    const wrap = document.createElement('div');
+    wrap.className = 'mtx-wrap';
+    if (cfg.layout.lead) {
+      const lead = document.createElement('span');
+      lead.className = 'mtx-lead';
+      lead.textContent = cfg.layout.lead;
+      wrap.appendChild(lead);
+    }
+    for (const block of cfg.layout.blocks) {
+      if (block.text !== undefined) {
+        const t = document.createElement('span');
+        t.className = 'mtx-lead';
+        t.textContent = block.text;
+        wrap.appendChild(t);
+        continue;
+      }
+      const bracket = document.createElement('div');
+      bracket.className = 'mtx-bracket';
+      const grid = document.createElement('div');
+      grid.className = 'mtx-grid';
+      grid.style.gridTemplateColumns = `repeat(${block.cols}, auto)`;
+      for (const id of block.ids) {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.id = 'mf-' + id;
+        inp.value = defaults[id];
+        inp.placeholder = '0';
+        inp.setAttribute('aria-label', id);
+        grid.appendChild(inp);
+        laidOut.add(id);
+      }
+      bracket.appendChild(grid);
+      wrap.appendChild(bracket);
+    }
+    fc.appendChild(wrap);
+  }
+
   cfg.fields.forEach(f => {
+    if (laidOut.has(f.id)) return;
     const row = document.createElement('div');
     row.className = 'field-row';
     row.innerHTML = `<label>${f.label}</label><input id="mf-${f.id}" type="text" value="${f.default ?? 0}" placeholder="0"/>`;
@@ -342,7 +406,7 @@ function openModal(type) {
     row.innerHTML = `<label>Use saved</label>` +
       `<select id="mf-lp-pick" data-tip="Fill the fields from a saved ${picker.kind}">` +
       `<option value="">— pick a ${picker.kind} —</option>` +
-      choices.map(o => `<option value="${o.id}">${o.name}</option>`).join('') +
+      choices.map(o => `<option value="${o.id}">${escapeHTML(o.name)}</option>`).join('') +
       `</select>`;
     fc.prepend(row);
     row.querySelector('select').addEventListener('change', e => {
@@ -361,7 +425,10 @@ function openModal(type) {
     info.textContent = cfg.info || '';
     info.style.display = cfg.info ? 'block' : 'none';
   }
-  fc.addEventListener('input', updateModalPreview);
+  if (!fc.dataset.wired) {
+    fc.dataset.wired = '1';
+    fc.addEventListener('input', updateModalPreview);
+  }
   updateModalPreview();
  
   document.getElementById('modal-bg').style.display = 'flex';
@@ -408,7 +475,7 @@ function closeModalBg(e) {
 
 function submitModal() {
   if (!currentModal) return;
-  if (currentModal !== 'addPoint' && !getActive()) { closeModal(); return; }
+  if (!['addPoint', 'addLine', 'addPlane'].includes(currentModal) && !getActive()) { closeModal(); return; }
   
   const cfg = MODAL_CONFIGS[currentModal];
   const vals = {};
@@ -422,7 +489,7 @@ function submitModal() {
   
   if (err) { document.getElementById('modal-err').textContent = 'Please enter valid numbers.'; return; }
   try {
-    if (currentModal === 'addPoint') {
+    if (['addPoint', 'addLine', 'addPlane'].includes(currentModal)) {
       cfg.apply(vals);
     } else {
       cfg.apply(vals, getActive());
@@ -439,12 +506,22 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && currentModal) submitModal();
 });
 
+const SHAPE_REGISTRY = [
+  { type: 'UnitCube', desc: 'Unit cube centred at origin' },
+  { type: 'Point', desc: 'A point at specified coordinates' }
+];
+
 MODAL_CONFIGS.addLine = {
   title: 'Add Line', desc: 'Save the line r = (a1,a2,a3) + t·(d1,d2,d3) for reuse in transformations.',
   info: 'Saved lines appear in the sidebar, are drawn in the scene, and can ' +
         'be picked inside Reflect, Rotate and Shear instead of retyping.',
   fields: [{id:'a1',label:'a1'},{id:'a2',label:'a2'},{id:'a3',label:'a3'},
            {id:'d1',label:'d1',default:1},{id:'d2',label:'d2'},{id:'d3',label:'d3'}],
+  layout: { lead: 'r =', blocks: [
+    { cols: 1, ids: ['a1','a2','a3'] },
+    { text: '+ t' },
+    { cols: 1, ids: ['d1','d2','d3'] },
+  ] },
   apply(v) {
     if (!v.d1 && !v.d2 && !v.d3) throw new Error('Direction cannot be the zero vector');
     addSavedLine(v);
@@ -460,11 +537,6 @@ MODAL_CONFIGS.addPlane = {
     addSavedPlane(v);
   }
 };
-
-const SHAPE_REGISTRY = [
-  { type: 'UnitCube', desc: 'Unit cube centred at origin' },
-  { type: 'Point', desc: 'A point at specified coordinates' }
-];
 
 function buildShapeOptions() {
   const container = document.getElementById('shape-options');
