@@ -13,13 +13,14 @@ Python version 3.12 and above is required, along with the following libraries:
 - OpenCV-Python
 - PyOpenGL
 - PyQt6 (NOT PySide6)
+- pyqtgraph
 - qimage2ndarray
 - SciPy
 - SymPy
 
 Assuming you have pip installed, the pip command to install all of the above libraries is:
 
-<code>pip install networkx numpy opencv-python pyopengl pyqt6 qimage2ndarray scipy sympy</code>
+<code>pip install networkx numpy opencv-python pyopengl pyqt6 pyqtgraph qimage2ndarray scipy sympy</code>
 
 # 2D Image Processing
 
