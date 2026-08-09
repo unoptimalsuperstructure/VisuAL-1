@@ -2,9 +2,6 @@ import numpy as np
 import sympy as sp
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from PyQt6.QtGui import QPixmap
-
-#np.set_printoptions(suppress=True)
 
 def GaussianEliminate(mat: np.array, pivot: bool, enableLU: bool, acc: int):
     global hist

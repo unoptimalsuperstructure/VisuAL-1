@@ -5,15 +5,13 @@ from PyQt6.QtCore import Qt, QPoint, QTimer, QEvent
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from Tooltips import TooltipButton
-from pathlib import Path
-from bson import json_util
-from pymongo import MongoClient
 import sqlite3
 from PathFinder import resource_path
 
 class ThreeDViewer(QOpenGLWidget):
-    def __init__(self, new, initSolids, initLinesPlanes, namespace):
+    def __init__(self, new, initSolids, initLinesPlanes, namespace, configSize):
         super().__init__()
+        self.configSize = configSize
         self.conn = sqlite3.connect(resource_path("./static/geometry.db"))
         self.cursor = self.conn.cursor()
 
@@ -118,14 +116,21 @@ class ThreeDViewer(QOpenGLWidget):
     def initializeGL(self):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glViewport(0, 0, 960, 720)
+        if self.configSize == 1:
+            glViewport(0, 0, 560, 420)
+        elif self.configSize == 2:
+            glViewport(0, 0, 720, 540)
+        elif self.configSize == 3:
+            glViewport(0, 0, 960, 640)
+        else:
+            glViewport(0, 0, 1440, 960)
         self.resetFlag = True
 
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
         if self.resetFlag:
             glLoadIdentity()
-            gluPerspective(60, 4/3, 0.1, 50.0)
+            gluPerspective(60, 1.25 if self.configSize <= 2 else 1.4, 0.1, 50.0)
             glTranslate(0, 0, -4)
             glRotatef(60, -1, 0, 0)
             glRotatef(45, 0, 0, 1)
@@ -227,21 +232,21 @@ class ThreeDViewer(QOpenGLWidget):
         self.y_delta = 0
         self.z_delta = 0
         if Qt.Key.Key_W in self.pressed_keys:
-            self.x_delta = -0.1 * math.sin(self.yaw*math.pi/180)
-            self.y_delta = -0.1 * math.cos(self.yaw*math.pi/180)
+            self.x_delta = -0.075 * math.sin(self.yaw*math.pi/180)
+            self.y_delta = -0.075 * math.cos(self.yaw*math.pi/180)
         if Qt.Key.Key_S in self.pressed_keys:
-            self.x_delta = 0.1 * math.sin(self.yaw*math.pi/180)
-            self.y_delta = 0.1 * math.cos(self.yaw*math.pi/180)
+            self.x_delta = 0.075 * math.sin(self.yaw*math.pi/180)
+            self.y_delta = 0.075 * math.cos(self.yaw*math.pi/180)
         if Qt.Key.Key_A in self.pressed_keys:
-            self.x_delta = 0.1 * math.cos(self.yaw*math.pi/180)
-            self.y_delta = -0.1 * math.sin(self.yaw*math.pi/180)
+            self.x_delta = 0.075 * math.cos(self.yaw*math.pi/180)
+            self.y_delta = -0.075 * math.sin(self.yaw*math.pi/180)
         if Qt.Key.Key_D in self.pressed_keys:
-            self.x_delta = -0.1 * math.cos(self.yaw*math.pi/180)
-            self.y_delta = 0.1 * math.sin(self.yaw*math.pi/180)
+            self.x_delta = -0.075 * math.cos(self.yaw*math.pi/180)
+            self.y_delta = 0.075 * math.sin(self.yaw*math.pi/180)
         if Qt.Key.Key_Space in self.pressed_keys:
-            self.z_delta = -0.1
+            self.z_delta = -0.075
         if Qt.Key.Key_Shift in self.pressed_keys:
-            self.z_delta = 0.1
+            self.z_delta = 0.075
         
         self.update()
 

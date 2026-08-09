@@ -1,6 +1,5 @@
-import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QLabel
-from PyQt6.QtCore import Qt, QPoint, QEvent
+from PyQt6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QLabel
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PathFinder import resource_path
 

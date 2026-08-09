@@ -1,5 +1,3 @@
-import os, sys, subprocess
-from pathlib import Path
 import TwoDWindows, gc
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import *

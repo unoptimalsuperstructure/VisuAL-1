@@ -2,8 +2,6 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QDoubleValidator, QColor
 from PyQt6.QtCore import pyqtSignal, Qt, QEvent
 import numpy as np
-from PathFinder import resource_path
-from Themes import DARK_THEME
 
 def num(x):
     if x == "":

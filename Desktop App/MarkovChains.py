@@ -1,4 +1,3 @@
-import sys
 import math
 
 import networkx as nx
@@ -33,7 +32,7 @@ class NodeItem(QGraphicsEllipseItem):
 
 class EdgeItem(QGraphicsLineItem):
 
-    def __init__(self, source, target, weight, sides, rotpos, colour):
+    def __init__(self, source, target, weight, sides, rotpos, colour, isDTMC):
         super().__init__()
 
         self.source = source
@@ -44,6 +43,7 @@ class EdgeItem(QGraphicsLineItem):
         self.sides = sides
         self.rotpos = rotpos
         self.colour = colour
+        self.isDTMC = isDTMC
     
     def boundingRect(self):
         p1 = self.line().p1()
@@ -56,30 +56,31 @@ class EdgeItem(QGraphicsLineItem):
         painter.setPen(QPen(Qt.GlobalColor.blue if self.colour == 0 else Qt.GlobalColor.yellow, 3) if self.highlight
                        else QPen(Qt.GlobalColor.black if self.colour == 0 else Qt.GlobalColor.white))
         self.arrow_size = 30 if self.highlight else 15
-        if self.source == self.target:
+        if self.source == self.target and self.isDTMC:
             painter.drawArc(self.boundingRect(), int(self.rotpos * 360 * (1 - 1 / self.sides) - 270/(1 + self.sides/3)) * 16, 330 * 16)
         else:
             line = self.line()
             painter.drawLine(line)
-            angle = math.atan2(-line.dy(), line.dx())
-            wing_angle = math.pi / 12
-            end_point = line.p2()
+            if self.isDTMC:
+                angle = math.atan2(-line.dy(), line.dx())
+                wing_angle = math.pi / 12
+                end_point = line.p2()
         
-            p1 = end_point + QPointF(
-                math.cos(angle + math.pi - wing_angle) * self.arrow_size,
-                -math.sin(angle + math.pi - wing_angle) * self.arrow_size
-            ) - 0.1 * (line.p2() - line.p1())
-            p2 = end_point + QPointF(
-                math.cos(angle + math.pi + wing_angle) * self.arrow_size,
-                -math.sin(angle + math.pi + wing_angle) * self.arrow_size
-            ) - 0.1 * (line.p2() - line.p1())
+                p1 = end_point + QPointF(
+                    math.cos(angle + math.pi - wing_angle) * self.arrow_size,
+                    -math.sin(angle + math.pi - wing_angle) * self.arrow_size
+                ) - 0.1 * (line.p2() - line.p1())
+                p2 = end_point + QPointF(
+                    math.cos(angle + math.pi + wing_angle) * self.arrow_size,
+                    -math.sin(angle + math.pi + wing_angle) * self.arrow_size
+                ) - 0.1 * (line.p2() - line.p1())
 
-            painter.setBrush((Qt.GlobalColor.blue if self.colour == 0 else Qt.GlobalColor.yellow) if self.highlight
-                             else (Qt.GlobalColor.black if self.colour == 0 else Qt.GlobalColor.white))
-            painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush((Qt.GlobalColor.blue if self.colour == 0 else Qt.GlobalColor.yellow) if self.highlight
+                                 else (Qt.GlobalColor.black if self.colour == 0 else Qt.GlobalColor.white))
+                painter.setPen(Qt.PenStyle.NoPen)
         
-            arrow_head = QPolygonF([end_point - 0.1 * (line.p2() - line.p1()), p1, p2])
-            painter.drawPolygon(arrow_head)
+                arrow_head = QPolygonF([end_point - 0.1 * (line.p2() - line.p1()), p1, p2])
+                painter.drawPolygon(arrow_head)
 
 def regular_polygon_layout(n, radius, centre):
 
@@ -113,7 +114,7 @@ def tableToMatrix(table: QTableWidget):
     return A.ravel() if A.shape[1] == 1 else A
 
 class MarkovChainsViewer(QGraphicsScene):
-    def __init__(self, mat, init, colour, size):
+    def __init__(self, mat, init, colour, size, isDTMC):
         super().__init__()
         self.setSceneRect(-200, -160, 440, 320)
         self.graph = nx.DiGraph()
@@ -129,7 +130,7 @@ class MarkovChainsViewer(QGraphicsScene):
         self.colour = colour
         self.size = size
         self.isCTMC = False
-        positions, textpos = regular_polygon_layout(self.graph.number_of_nodes(), 150 if self.size == 1 else 200, (18, -10))
+        positions, textpos = regular_polygon_layout(self.graph.number_of_nodes(), 150 if self.size == 1 else 200 if self.size < 4 else 300, (18, -10))
 
         i = 0
         for node, (x, y) in positions.items():
@@ -143,7 +144,7 @@ class MarkovChainsViewer(QGraphicsScene):
             item.label = self.addText(str(round(init[len(init) - 1 - node], 3)))
             item.label.setDefaultTextColor(Qt.GlobalColor.black if colour == 0 else Qt.GlobalColor.white)
             item.label.setScale(2)
-            item.label.setPos(textpos[i][0], textpos[i][1])
+            item.label.setPos(textpos[i][0] - 16, textpos[i][1])
 
             self.nodes[len(init) - 1 - node] = item
             i += 1
@@ -158,7 +159,7 @@ class MarkovChainsViewer(QGraphicsScene):
             edge = EdgeItem(
                 self.nodes[u],
                 self.nodes[v],
-                self.graph[u][v]["weight"], mat.shape[0], rotpos if u == v else -1, self.colour
+                self.graph[u][v]["weight"], mat.shape[0], rotpos if u == v else -1, self.colour, isDTMC
             )
 
             x1 = self.nodes[u].x()
@@ -453,11 +454,11 @@ class MarkovChainsSidePanel(QGridLayout):
                 else:
                     for i in range(self.startTime.value()):
                         v = self.matrix @ v
-            self.viewer = MarkovChainsViewer(self.matrix, v, self.viewer.colour, self.size)
+            self.viewer = MarkovChainsViewer(self.matrix, v, self.viewer.colour, self.size, not self.isCTMC)
             self.viewer.isCTMC = self.isCTMC
             self.intervals.setEnabled(self.isCTMC)
             newViewer = QGraphicsView(self.viewer)
-            dim = 420 if self.size == 1 else 600
+            dim = 420 if self.size == 1 else 600 if self.size < 4 else 800
             newViewer.setFixedSize(dim, dim)
             oldViewer = self.main.graphViewer
             self.main.layout.replaceWidget(self.main.graphViewer, newViewer)
