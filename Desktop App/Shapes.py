@@ -161,7 +161,7 @@ class Solid:
             lastShape.isShadow = True
             lastShape.updateMatrix(self.curMatrix, False)
             if float(abs(np.linalg.det(matrix[0]))) < 0.00001:
-                self.singularMatrixStack.append(self.curMatrix)
+                self.singularMatrixStack.append(self.curMatrix.copy())
             if redrawEdges:
                 for i in range(len(self.vertices)):
                     matrix[2].append(*self.vertices[i], *lastShape.vertices[i])
