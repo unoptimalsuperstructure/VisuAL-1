@@ -77,6 +77,8 @@ class Polygon:
         centre /= len(solid.vertices)
         solid.vertices.append(centre.tolist())
 
+        solid.initVertices = solid.vertices.copy()
+
         solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
         return solid
     
@@ -97,6 +99,8 @@ class Polygon:
             centre = centre + vertex
         centre /= len(solid.vertices)
         solid.vertices.append(centre.tolist())
+
+        solid.initVertices = solid.vertices.copy()
 
         solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
         return solid
@@ -161,7 +165,7 @@ class Solid:
             lastShape.isShadow = True
             lastShape.updateMatrix(self.curMatrix, False)
             if float(abs(np.linalg.det(matrix[0]))) < 0.00001:
-                self.singularMatrixStack.append(deepcopy(self.curMatrix))
+                self.singularMatrixStack.append(self.curMatrix)
             if redrawEdges:
                 for i in range(len(self.vertices)):
                     matrix[2].append(*self.vertices[i], *lastShape.vertices[i])
