@@ -1,11 +1,9 @@
-import NumStabilityWindows, gc
-from PyQt6.QtGui import QPainter, QPixmap
+import NumStabilityWindows
 from PyQt6.QtWidgets import *
-from PyQt6.QtCore import Qt, QTimer
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from PyQt6.QtCore import Qt, QPoint, QEvent
+from Tooltips import TooltipButton
 import csv
-import numpy as np, sympy as sp
+import numpy as np
 from MatrixPrinter import *
 from LinearAlgebraAlgos import *
 
@@ -48,7 +46,11 @@ class NumStabilitySidePanel(QGridLayout):
 
         addDataButton = QPushButton("Import CSV...")
         addDataButton.clicked.connect(self.loadCSV)
-        randomDataButton = QPushButton("Generate random data...")
+        randomDataButton = TooltipButton("Generate random data...",
+                                         "CustomMatrix",
+                                         "Feature coming soon")
+        randomDataButton.setDisabled(True)
+        randomDataButton.installEventFilter(self)
         actionButton = QPushButton("Action...")
         actionButton.clicked.connect(self.actionWindow)
         resetButton = QPushButton("Reset")
@@ -58,6 +60,25 @@ class NumStabilitySidePanel(QGridLayout):
         self.addWidget(randomDataButton)
         self.addWidget(actionButton)
         self.addWidget(resetButton)
+
+    def eventFilter(self, obj, event):
+            if isinstance(obj, TooltipButton):
+                if event.type() == QEvent.Type.Enter:
+                    self.show_bubble_above_button(obj)
+                    return True
+                elif event.type() == QEvent.Type.Leave:
+                    obj.tooltip.hide()
+                    return True
+            return super().eventFilter(obj, event)
+    
+    def show_bubble_above_button(self, button):
+        button_global_pos = button.mapToGlobal(QPoint(0, 0))
+            
+        x = button_global_pos.x() - button.tooltip.width() - 15
+        y = button_global_pos.y() + (button.height() // 2) - (button.tooltip.height() // 2)
+            
+        button.tooltip.move(x, y)
+        button.tooltip.show()
     
     def setDisplayAcc(self, x):
         self.displayAcc = int(x)

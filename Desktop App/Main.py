@@ -139,13 +139,15 @@ class HomeWindow(QMainWindow):
 
         app.setStyleSheet(LIGHT_THEME if theme == 0 else DARK_THEME)
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1d - Home")
+        self.setWindowTitle("Visu(AL)-1 v1.0.0 - Home")
         if size == 1:
             self.resize(800, 600 - 30)
         elif size == 2:
             self.resize(1024, 768 - 30)
-        elif size == 3 or size == 4:
+        elif size == 3:
             self.resize(1280, 720 - 30)
+        elif size == 4:
+            self.resize(1920, 1080 - 30)
         else:
             sys.exit()
 
@@ -204,7 +206,7 @@ class TwoDMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1d - 2D Image Processing")
+        self.setWindowTitle("Visu(AL)-1 v1.0.0 - 2D Image Processing")
         self.viewer = TwoDViewer([Image(resource_path("static/kagura.png"), size)], size)
         if size == 1:
             self.resize(800, 600 - 30)
@@ -256,16 +258,20 @@ class ThreeDMainWindow(QMainWindow):
     def __init__(self, new, shapes, linesPlanes, namespace):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1d - 3D Visualiser")
-        self.viewer = ThreeDViewer(new, shapes, linesPlanes, namespace)
+        self.setWindowTitle("Visu(AL)-1 v1.0.0 - 3D Visualiser")
+        self.viewer = ThreeDViewer(new, shapes, linesPlanes, namespace, size)
         if size == 1:
             self.resize(800, 600 - 30)
             self.viewer.setFixedSize(560, 420)
         elif size == 2:
             self.resize(1024, 768 - 30)
             self.viewer.setFixedSize(720, 540)
-        elif size == 3 or size == 4:
+        elif size == 3:
             self.resize(1280, 720 - 30)
+            self.viewer.setFixedSize(960, 640)
+        elif size == 4:
+            self.resize(1920, 1080 - 30)
+            self.viewer.setFixedSize(1440, 960)
         else:
             sys.exit()
         
@@ -404,8 +410,17 @@ class NumStabilityMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1d - Numerical Stability")
-        self.resize(1280, 720)
+        self.setWindowTitle("Visu(AL)-1 v1.0.0 - Numerical Stability")
+        if size == 1:
+            self.resize(800, 600 - 30)
+        elif size == 2:
+            self.resize(1024, 768 - 30)
+        elif size == 3:
+            self.resize(1280, 720 - 30)
+        elif size == 4:
+            self.resize(1920, 1080 - 30)
+        else:
+            sys.exit()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -422,14 +437,15 @@ class NumStabilityMainWindow(QMainWindow):
         self.mainLayout.addWidget(sidePanel, stretch = 1)
     
     def resizeEvent(self, event):
-        w = event.size().width()
-        h = event.size().height()
-        if w/h < 8/5:
-            self.resize(max(720, int(h / 5 * 8)), max(415, h))
-        if w < 720 or h < 415:
-            self.resize(720, 415)
-        self.mainLayout.setStretch(0, 4 * h)
-        self.mainLayout.setStretch(1, 3 * w - 4 * h)
+        if size == 3 or size == 4:
+            w = event.size().width()
+            h = event.size().height()
+            if w/h < 8/5:
+                self.resize(max(720, int(h / 5 * 8)), max(415, h))
+            if w < 720 or h < 415:
+                self.resize(720, 415)
+            self.mainLayout.setStretch(0, 4 * h)
+            self.mainLayout.setStretch(1, 3 * w - 4 * h)
     
     def closeEvent(self, event):
         self.window = HomeWindow()
@@ -440,12 +456,12 @@ class MarkovChainsMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Visu(AL)-1 v0.2.1d - Markov Chains")
+        self.setWindowTitle("Visu(AL)-1 v1.0.0 - Markov Chains")
         mat = np.array([[0.2, 0.4, 0.3],
                         [0.5, 0.1, 0.3],
                         [0.3, 0.5, 0.4]])
         init = np.array([1, 0, 0])
-        viewer = MarkovChainsViewer(mat, init, theme, size)
+        viewer = MarkovChainsViewer(mat, init, theme, size, True)
         self.graphViewer = QGraphicsView(viewer)
 
         if size == 1:
@@ -454,9 +470,12 @@ class MarkovChainsMainWindow(QMainWindow):
         elif size == 2:
             self.resize(1024, 768 - 30)
             self.graphViewer.setFixedSize(600, 600)
-        elif size == 3 or size == 4:
+        elif size == 3:
             self.resize(1280, 720 - 30)
             self.graphViewer.setFixedSize(600, 600)
+        elif size == 4:
+            self.resize(1920, 1080 - 30)
+            self.graphViewer.setFixedSize(800, 800)
         else:
             sys.exit()
 
@@ -529,12 +548,11 @@ class SettingsWindow(QMainWindow):
         self.sizeBox.setValue(size)
         self.sizeBox.valueChanged.connect(self.setSize)
         self.mainLayout.addWidget(self.sizeBox, 5, 3)
-        self.mainLayout.addWidget(QLabel("Configure the default window size for Visu(AL)-1 depending on your display resolution.\n" \
-                                         "Currently only supported for 3D Visualiser and 2D Image Processing.\n\n" \
+        self.mainLayout.addWidget(QLabel("Configure the default window size for Visu(AL)-1 depending on your display resolution.\n\n" \
                                          "Size 1: Use this for 800x600 displays. Preview panels will be sized to 560x420.\n" \
                                          "Size 2: Use this for 1024x768 displays. Preview panels will be sized to 720x540.\n" \
-                                         "Size 3: Suitable for displays 1280x720 or larger. 2D image processing panel will be\n" \
-                                         "sized to 960x540, and 3D graphics has no theoretical limit.\n" \
+                                         "Size 3: Suitable for displays 1280x720 or larger. 2D image processing panel will be sized to\n" \
+                                         "960x540, and 3D graphics to 960x640.\n" \
                                          "Size 4: Enable high-definition image previews for 2D image processing; preview panel will be\n" \
                                          "sized to 1600x900. Warning: Higher memory load and requires a 1920x1080 or larger display."), 6, 0, 1, 4)
         self.submit = QPushButton("Save")

@@ -1,7 +1,5 @@
 from PyQt6.QtWidgets import *
-from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QFont
-from MatrixPrinter import toString, concat
+from PyQt6.QtCore import pyqtSignal
 
 def num(x):
     if x == "":

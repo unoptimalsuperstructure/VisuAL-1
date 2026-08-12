@@ -77,6 +77,8 @@ class Polygon:
         centre /= len(solid.vertices)
         solid.vertices.append(centre.tolist())
 
+        solid.initVertices = solid.vertices.copy()
+
         solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
         return solid
     
@@ -97,6 +99,8 @@ class Polygon:
             centre = centre + vertex
         centre /= len(solid.vertices)
         solid.vertices.append(centre.tolist())
+
+        solid.initVertices = solid.vertices.copy()
 
         solid.default = [solid.vertices.copy(), solid.edges.copy(), solid.surfaces.copy()]
         return solid

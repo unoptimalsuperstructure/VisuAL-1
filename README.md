@@ -1,5 +1,5 @@
 # VisuAL-1
-**Current version: v0.2.1d**
+**Current version: v1.0.0**
 
 Multi-purpose tool for visualising the applications of linear algebra, such as in 3D graphics rendering and data analytics.
 
@@ -13,13 +13,14 @@ Python version 3.12 and above is required, along with the following libraries:
 - OpenCV-Python
 - PyOpenGL
 - PyQt6 (NOT PySide6)
+- pyqtgraph
 - qimage2ndarray
 - SciPy
 - SymPy
 
 Assuming you have pip installed, the pip command to install all of the above libraries is:
 
-<code>pip install networkx numpy opencv-python pyopengl pyqt6 qimage2ndarray scipy sympy</code>
+<code>pip install networkx numpy opencv-python pyopengl pyqt6 pyqtgraph qimage2ndarray scipy sympy</code>
 
 # 2D Image Processing
 
@@ -61,14 +62,10 @@ Web App Controls (Spherical Coordinates):
 
 Features: Import a CSV of a transition matrix (DTMC) or Q-matrix (CTMC), or form your own matrix and initial distribution vector. Then, visualise the movement through the graph (nodes and edges), and see the changes over time in the line graph.
 
-# Known Bugs
-## High Priority
-~~- (2D Image Processing, Desktop App) Images are not garbage collected upon closing the window, which returns to the home screen. This will be fixed by the next update.~~ (Fixed in v0.1.1b)
-## Low Priority
--  (3D Visualiser, Desktop App) The camera panning code is based on the camera yaw, which does not update accurately when the camera is panned quickly. This may cause the camera to roll inadvertently and eventually mess up WASD movements. The only way to fix this is to middle-click.
-- (3D Visualiser, Web App) Sometimes, object shadows will linger in their previous position even when the physical object has been reset.
-
 # Changelog
+v0.2.1d -> v1.0.0
+- Bug fixes in preparation for stable release
+
 v0.2.1c -> v0.2.1d
 - Added matrix inversion and some bug fixes
 

@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 def resource_path(relative_path: str) -> Path:

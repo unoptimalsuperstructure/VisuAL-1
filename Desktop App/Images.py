@@ -65,6 +65,8 @@ class Image:
                         r = op[2].get(r)
                         a = a.astype(np.uint8)
                         temp = cv2.merge([b, g, r, a])
+                else:
+                    temp = op[2].get(temp)
                 if isinstance(temp, tuple):
                     temp = temp[0]
             elif isinstance(op[2], list) and op[2][0] == "Crop":
@@ -272,7 +274,10 @@ class Convolution:
             if layer.img.channels == 1:
                 layer.img.stack.append([compress.get(layer.img.stack[-1][0]), 1, compress])
             elif layer.img.channels == 3:
-                b, g, r = cv2.split(image)
+                try:
+                    b, g, r = cv2.split(image)
+                except:
+                    b, g, r, a = cv2.split(image)
                 b = compress.get(b)
                 g = compress.get(g)
                 r = compress.get(r)
